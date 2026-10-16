@@ -81,7 +81,7 @@ Each project will include its own problem statement, dataset or data-generation 
 I'm interested in ideas at the intersection of **AI, analytics, product thinking, and business impact**.
 
 - **LinkedIn:** https://in.linkedin.com/in/kishorerabhinav
-- **GitHub:** (https://github.com/)
+- **GitHub:** https://github.com/kishorerabhinav/abhinav-builds-intelligence
 
 ---
 
