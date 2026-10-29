@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<workbook source-build='2024.2.0 (20242.24.0613.0835)' version='18.1' xmlns:user='http://www.tableausoftware.com/xml/user'>
+  <datasources>
+    <datasource hasconnection='false' inline='true' name='Parameters' version='18.1'>
+      <column caption='Target Margin' datatype='real' name='[Parameter 1]' param-domain-type='range' role='measure' type='quantitative' value='0.2'>
+        <calculation class='tableau' formula='0.2' />
+      </column>
+    </datasource>
+    <datasource caption='Sales' inline='true' name='federated.0abc123' version='18.1'>
+      <connection class='federated'>
+        <named-connections>
+          <named-connection caption='sales' name='textscan.1'>
+            <connection class='textscan' directory='C:/Users/someone/Desktop/data' filename='sales.csv' />
+          </named-connection>
+        </named-connections>
+      </connection>
+      <column caption='Profit Ratio' datatype='real' name='[Calculation_1]' role='measure' type='quantitative'>
+        <calculation class='tableau' formula='SUM([Profit]) / SUM([Sales])' />
+      </column>
+      <column datatype='real' name='[Sales]' role='measure' type='quantitative' />
+    </datasource>
+  </datasources>
+  <worksheets>
+    <worksheet name='Sales by Region'>
+      <table><view><datasources><datasource caption='Sales' name='federated.0abc123' /></datasources></view></table>
+    </worksheet>
+    <worksheet name='Profit Trend' />
+  </worksheets>
+  <dashboards>
+    <dashboard name='Overview' />
+  </dashboards>
+</workbook>

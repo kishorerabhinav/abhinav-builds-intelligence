@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tableau-developer-arsenal"
+version = "0.1.0"
+description = "Python toolkit for Tableau developers: Tableau Public stats, Server/Cloud REST publishing, workbook inspection and Hyper extracts."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Abhinav KR" }]
+dependencies = ["requests>=2.31"]
+
+[project.optional-dependencies]
+hyper = ["tableauhyperapi>=0.0.19000", "pandas>=2.0"]
+dotenv = ["python-dotenv>=1.0"]
+
+[project.scripts]
+tda = "arsenal.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["arsenal*"]
