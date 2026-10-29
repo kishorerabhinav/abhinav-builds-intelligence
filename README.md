@@ -25,6 +25,7 @@ This portfolio showcases practical projects that combine technical skills with r
 | Analytics Automation Pipeline | Python, Pandas, SQL | Automate data preparation and reporting |
 | AI Analytics Copilot | Python, SQL, LLMs | Explore natural-language interaction with business data |
 | Customer & Product Analytics | SQL, Tableau, Python | Analyze product adoption, engagement, and performance |
+| [Tableau Developer Arsenal](tableau-developer-arsenal/) | Python, Tableau REST API, Hyper API | Publish, inspect and monitor Tableau content from scripts |
 
 *Projects will be added as I build and document them.*
 
@@ -63,7 +64,8 @@ abhinav-builds-intelligence/
 ├── executive-kpi-intelligence/
 ├── analytics-automation-pipeline/
 ├── ai-analytics-copilot/
-└── customer-product-analytics/
+├── customer-product-analytics/
+└── tableau-developer-arsenal/
 ```
 
 Each project will include its own problem statement, dataset or data-generation approach, implementation, results, and instructions to reproduce the work.
