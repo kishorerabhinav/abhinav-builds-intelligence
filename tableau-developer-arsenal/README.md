@@ -61,9 +61,36 @@ chunked `fileUploads` endpoint automatically.
 ```bash
 tda twb inspect dashboard.twbx      # data sources, calcs, sheets, dashboards, parameters
 tda twb lint dashboard.twb          # flags C:\... paths that break when shared (exit 1)
+tda twb check dashboard.twbx        # finds what stops Tableau loading a generated workbook (exit 1)
 tda twb package dashboard.twb --data data\sales.csv
 tda hyper data\sales.csv --parse-dates order_date
 ```
+
+## Building dashboards from Python
+
+`arsenal.dashboard_builder` writes a packaged .twbx without Tableau Desktop:
+data sources from CSV, parameters, calculated fields, worksheets, tiled
+dashboards, dynamic zone visibility and click actions. Each XML convention in
+it was checked against errors Tableau raised; they're listed in the skill's
+[RULES.md](.claude/skills/tableau-dashboard-builder/RULES.md).
+
+```bash
+python examples/hr_diversity/prep_data.py examples/hr_diversity/data/hr_employees.csv out/hr_data
+copy examples\hr_diversity\data\hr_employees.csv out\hr_data\
+python examples/hr_diversity/build.py out/hr_data out/Diversity_in_HR.twbx
+tda twb check out/Diversity_in_HR.twbx
+```
+
+The example rebuilds a Claude dashboard of the #RWFD HR diversity data in
+the original Tableau Public workbook's colours. Open the result in Tableau
+2023.1 or later.
+
+### Claude skill
+
+`.claude/skills/tableau-dashboard-builder/` teaches Claude the workflow:
+shape the data in Python, build with the library, run `tda twb check`, then
+iterate from what Tableau shows. Claude Code picks it up when working in this
+folder; to use it elsewhere, copy the folder to `~/.claude/skills/`.
 
 ## Using it from Python
 
@@ -87,9 +114,12 @@ arsenal/
 ├── public_api.py      # Tableau Public profile API (read-only)
 ├── public_publish.py  # hand-off to Tableau Public Desktop
 ├── rest_client.py     # Server/Cloud REST: auth, browse, publish, download, refresh, export
-├── workbook_tools.py  # .twb/.twbx inspect, lint, package
+├── workbook_tools.py  # .twb/.twbx inspect, lint, check, package
+├── dashboard_builder.py  # write .twbx workbooks and dashboards from Python
 ├── hyper_tools.py     # CSV / DataFrame -> .hyper
 └── cli.py             # `tda` command
+examples/hr_diversity/ # data prep + build script for a full dashboard
+.claude/skills/tableau-dashboard-builder/  # Claude skill: SKILL.md + RULES.md
 ```
 
 ## Tests
@@ -98,7 +128,8 @@ arsenal/
 python -m unittest discover tests
 ```
 
-The tests run offline. They cover workbook inspect, lint and package; a CSV to
+The tests run offline. They cover workbook inspect, lint, check and package; building a workbook
+with the dashboard builder and catching each load error Tableau has raised; a CSV to
 Hyper round trip (skipped without `tableauhyperapi`); and the REST client
 against a fake server: sign-in, pagination, single-request and chunked
 publish, and errors.
