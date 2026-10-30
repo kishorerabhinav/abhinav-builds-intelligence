@@ -109,6 +109,14 @@ def cmd_twb(args) -> None:
         print("No hard-coded file paths found.")
     elif args.action == "package":
         print(wt.package_twbx(args.file, args.data or [], args.out))
+    elif args.action == "check":
+        problems = wt.check_workbook(args.file)
+        if problems:
+            print("Tableau is likely to refuse this workbook:")
+            for p in problems:
+                print(f"  {p}")
+            sys.exit(1)
+        print("No known load problems found. Open it in Tableau to confirm it renders.")
 
 
 def cmd_hyper(args) -> None:
@@ -150,8 +158,8 @@ def build_parser() -> argparse.ArgumentParser:
     srv.add_argument("--no-extract", action="store_true")
     srv.set_defaults(func=cmd_server)
 
-    twb = sub.add_parser("twb", help="Inspect, lint or package local workbooks")
-    twb.add_argument("action", choices=["inspect", "lint", "package"])
+    twb = sub.add_parser("twb", help="Inspect, lint, check or package local workbooks")
+    twb.add_argument("action", choices=["inspect", "lint", "check", "package"])
     twb.add_argument("file")
     twb.add_argument("--data", nargs="*", help="package: data files to bundle")
     twb.add_argument("--out")

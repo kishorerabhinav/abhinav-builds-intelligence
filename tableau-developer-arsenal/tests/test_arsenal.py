@@ -6,6 +6,7 @@ Run with: python -m unittest discover tests
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 import unittest
 import zipfile
@@ -45,6 +46,65 @@ class WorkbookToolsTest(unittest.TestCase):
             with zipfile.ZipFile(twbx) as zf:
                 self.assertEqual(sorted(zf.namelist()), ["Data/sales.csv", "sample.twb"])
             self.assertEqual(wt.inspect_workbook(twbx)["dashboards"], ["Overview"])
+
+
+class DashboardBuilderTest(unittest.TestCase):
+    """A small workbook with every feature the builder writes, checked like Tableau would load it."""
+
+    def build(self, tmp: Path) -> Path:
+        from arsenal.dashboard_builder import F, N, Workbook, blank_zone, pane, param_zone, runs, sheet_zone
+
+        (tmp / "sales.csv").write_text("region,sales\nWest,10\nEast,5\n")
+        wb = Workbook()
+        region = wb.param("Region", "West", ["West", "East"])
+        view = wb.param("View", "Chart", ["Chart", "Table"])
+        ds = wb.datasource("sales001", "Sales", "sales.csv", [("region", "string"), ("sales", "real")])
+        picked = ds.calc("Picked region", "boolean", f"[region] = {region.ref}")
+        show_chart = ds.calc("Show chart", "boolean", f"{view.ref} = 'Chart'")
+        ds.palette("[region]", {"West": "#cea25a", "East": "#7f818d"})
+        zero, one = ds.zero_one()
+        reg, sales = F(ds, "[region]"), F(ds, "[sales]", "sum")
+        wb.worksheet("Bars", ds, rows=[reg], cols=[sales], filters=[(F(ds, picked), "true")], sorts=[(reg, sales)],
+                     panes=[pane("Bar", enc=[("color", reg), ("text", sales), ("lod", F(ds, zero)), ("lod", F(ds, one)), ("tooltip", region)],
+                                 label=runs([(sales, {"bold": "true"}), (" in ", {}), (region, {})]))])
+        dash = wb.dashboard("Home", 800, 600)
+        dash.root = N("vert", None, kids=[param_zone(50, region, "Region"), blank_zone(10),
+                                          sheet_zone("Bars", show=(ds.ref(show_chart), True))])
+        wb.set_param_on_click(dash, "Bars", reg, region, "Pick region")
+        wb.deselect_on_click(dash, "Bars", ds)
+        return wb.save(tmp / "built.twbx", tmp)
+
+    def test_build_passes_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            twbx = self.build(Path(tmp))
+            self.assertEqual(wt.check_workbook(twbx), [])
+            info = wt.inspect_workbook(twbx)
+            self.assertEqual((info["worksheets"], info["dashboards"], info["parameters"]), (["Bars"], ["Home"], ["Region", "View"]))
+            with zipfile.ZipFile(twbx) as zf:
+                self.assertIn("Data/datasources/sales.csv", zf.namelist())
+                root = ET.fromstring(zf.read("built.twb"))
+            self.assertEqual([c.tag for c in root.find("actions")],
+                             ["action", "datasources", "datasource-dependencies", "edit-parameter-action"])
+            self.assertIsNotNone(root.find("datagraph/graph/node-execution-subgraphs"))
+
+    def test_check_catches_what_tableau_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            twbx = self.build(Path(tmp))
+            with zipfile.ZipFile(twbx) as zf:
+                xml = zf.read("built.twb").decode()
+            broken = Path(tmp) / "broken.twb"
+            cases = {
+                "not declared on the dashboard": lambda s: re.sub(r"(<size [^>]*/>)<datasources>.*?(?=<zones>)", r"\1", s),
+                "rejected by older loaders": lambda s: s.replace("<sort class='computed'", "<computed-sort", 1).replace("<agg-type type='attr' />", "<agg-type type='attr' /><clear-option type='do-nothing' />"),
+                "param-domain-type='all'": lambda s: s.replace("param-domain-type='list'", "param-domain-type='all'", 1),
+                "<label> is not an encoding": lambda s: s.replace("<tooltip column=", "<label column=", 1),
+                "node-execution-subgraphs": lambda s: re.sub(r"<node-execution-subgraphs>.*?</node-execution-subgraphs>", "", s),
+                "missing sheet": lambda s: s.replace("name=\"Bars\" show-title", "name=\"Gone\" show-title"),
+            }
+            for expected, mutate in cases.items():
+                broken.write_text(mutate(xml))
+                problems = wt.check_workbook(broken)
+                self.assertTrue(any(expected in p for p in problems), f"{expected!r} not in {problems}")
 
 
 class HyperTest(unittest.TestCase):
