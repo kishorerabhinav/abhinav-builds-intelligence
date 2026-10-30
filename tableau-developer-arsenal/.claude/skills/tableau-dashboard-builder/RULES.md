@@ -32,7 +32,7 @@ A lookup by name or id failed while loading. Seen twice:
 
 | Symptom | Rule |
 |---|---|
-| Zones misplaced, overlapping, charts hidden behind cards | Use a tiled layout (`layout-flow` containers) with fixed sizes, not floating zones. Backgrounds and borders go on containers. |
+| Zones misplaced, overlapping, charts hidden behind cards | Floating zones were written inside the tiled layout. Write them as siblings of it inside `<zones>` (`Dashboard.float`), or use a tiled layout with fixed sizes. Backgrounds and borders go on containers. |
 | Empty band at the bottom | Fix every height; flexible containers let Tableau redistribute space. |
 | Default colours instead of yours | A colour palette needs the field declared as a `<column-instance>` on the data source, beside the palette in the data source `<style>`. |
 | `<Parameters.X>` blank in a label or tooltip | The parameter must also be on the Marks card (an encoding). |
@@ -52,6 +52,8 @@ A lookup by name or id failed while loading. Seen twice:
   *dashboard's* simple-id. Both need the BasicButtonObject / DashboardExportButton entries
   in the manifest (the builder adds them).
 - Pictures and button images live in the .twbx under `Image/` (`Workbook.image`).
+- Clickable icons: float the image(s), then float a transparent sheet over them whose marks
+  carry a parameter action (the view switch). Swap dark/grey icons with zone visibility.
 - Arrows that depend on a value go in a custom number format on a numeric field (`*▲ 0.0%`,
   `*▼ 0.0%;▼ 0.0%`, confirmed), not in a string calc, so Marks cards stay numeric. Keep letters
   out of number formats and put words in the label as static text.
@@ -65,5 +67,7 @@ A lookup by name or id failed while loading. Seen twice:
 - Fonts: Trebuchet MS for text, Georgia for large numbers and titles.
 - String parameters for years (`"2022"`), compared with `INT()`, so they never
   display as `2,022`.
-- Helper CSVs carry anything layered or ranked; Tableau only filters them.
+- Colours: the Claude dashboard palette (near-white page, white cards with hairline borders,
+  blue accent, warm grey text, green / dark red for up / down).
+- Helper CSVs carry month-by-month comparisons and rankings; Tableau only filters them.
 - Sheet names without spaces when an action targets them (`KPI_Diversity`).
