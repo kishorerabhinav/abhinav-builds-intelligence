@@ -53,13 +53,12 @@ Checked in Tableau with the HR example:
 - Dynamic zone visibility on containers and blank zones (views, selected-card
   strips).
 
-Avoid: Gantt-bar layers read from a helper CSV and filtered by a
-parameter comparison. Tableau accepted the sheet (a re-saved copy kept every
-field, filter and sort, and the data matched the filter) but drew nothing,
-not even row headers. Build breakdowns from the main data source instead,
-with parameter-driven calcs as the KPI cards do and a dual-axis grey track
-plus coloured bar (`examples/hr_diversity`, `By_*`). That version is waiting
-for confirmation in Tableau.
+Bar charts with a dual-axis grey track and gold bar render (`examples/hr_diversity`,
+`By_*`) when their Marks card is empty. Adding tooltip and label fields to
+those sheets made them draw nothing, so their numbers go in the row label,
+built from FIXED calcs. Gantt layers from a helper CSV also drew nothing.
+Use a split test (one dashboard, the chart drawn several ways, each
+dropping one feature) before building on an unproven chart.
 
 When the person sends back a .twbx Tableau has re-saved, read it: it shows
 how Tableau parsed every data source, field and sheet.

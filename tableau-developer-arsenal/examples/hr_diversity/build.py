@@ -116,7 +116,15 @@ GROUPS = {}
 for card, (picker, options) in GROUPINGS.items():
     group = emp.calc(f"{card} group", "string", f"CASE {picker.ref}\n" + "\n".join(f"WHEN '{v}' THEN {f}" for v, f in options) + "\nEND")
     hires = emp.calc(f"{card} group hires", "integer", f"{{FIXED {group} : SUM(IIF(YEAR([hire_date]) = {YEAR_N}, 1, 0))}}")
-    label = emp.calc(f"{card} group label", "string", f"{group} + ' (' + STR({hires}) + ')'")
+    # The row label carries the numbers: in Tableau, fields on the breakdown's Marks card blanked the
+    # sheet, while row labels render. Shares are FIXED per group so they can sit in a dimension.
+    picked_now = emp.calc(f"{card} group picked", "integer", f"{{FIXED {group} : SUM(IF YEAR([hire_date]) = {YEAR_N} THEN {picked} ELSE 0 END)}}")
+    prev_n = emp.calc(f"{card} group hires year before", "integer", f"{{FIXED {group} : SUM(IIF(YEAR([hire_date]) = {YEAR_N} - 1, 1, 0))}}")
+    picked_prev = emp.calc(f"{card} group picked year before", "integer",
+                           f"{{FIXED {group} : SUM(IF YEAR([hire_date]) = {YEAR_N} - 1 THEN {picked} ELSE 0 END)}}")
+    label = emp.calc(f"{card} group label", "string",
+                     f"{group} + ' (' + STR({hires}) + ')  ' + STR(ROUND({picked_now} / {hires} * 100, 1)) + '%'"
+                     f" + IIF({prev_n} > 0, '  vs ' + STR(ROUND({picked_prev} / {prev_n} * 100, 1)) + '%', '')")
     hired = emp.calc(f"{card} group hired this year", "boolean", f"{hires} > 0")
     lit = lambda v: f'"{v}"' if "'" in v else f"'{v}'"  # Master's Degree goes in double quotes
     ranked = [(v, f) for v, f in options if v in ORDERS]
@@ -199,7 +207,7 @@ measure_name = emp.calc("Measure name", "string", measure.ref)
 year_name = emp.calc("Year name", "string", year.ref)
 
 
-def breakdown_sheet(name, card, *, value_label=True, year_before_label=True, tooltip_counts=False, tooltip_names=False):
+def breakdown_sheet(name, card, *, value_label=False, year_before_label=False, tooltip_counts=False, tooltip_names=False):
     """Grey track and gold bar for each group. The keyword switches let a split test add marks-card
     fields one group at a time; the defaults are the combination confirmed in Tableau."""
     g = GROUPS[card]
@@ -223,7 +231,7 @@ def breakdown_sheet(name, card, *, value_label=True, year_before_label=True, too
         texts.append(("text", pyl))
         label_runs += [("  ", {}), (pyl, {"fontcolor": MUTED, "fontsize": 8})]
     style = ("<style-rule element='axis'>" + fixed_axis(trk, 0, 1.0, "cols") + fixed_axis(cy, 0, 1.0, "cols", sync=True) + "</style-rule>"
-             f"<style-rule element='header'><format attr='width' field='{row.ref}' value='175' /></style-rule>"
+             f"<style-rule element='header'><format attr='width' field='{row.ref}' value='215' /></style-rule>"
              f"<style-rule element='label'><format attr='font-size' field='{row.ref}' value='9' />"
              f"<format attr='color' field='{row.ref}' value='{INK}' /></style-rule>")
     wb.worksheet(name, emp, rows=[row], cols=[trk, cy], dual_cols=True, sorts=[(row, order)],
@@ -291,7 +299,7 @@ def breakdown_card(card, heading, param):
         text_zone(26, [(measure, {"fontcolor": INK, "fontsize": 12, "bold": "true"}), (f" by {heading}", {"fontcolor": INK, "fontsize": 12, "bold": "true"})]),
         N("horz", 46, kids=[
             text_zone(None, [("Share of ", {"fontcolor": MUTED, "fontsize": 9}), (year, {"fontcolor": MUTED, "fontsize": 9}),
-                             (" hires in each group, with the year before in grey.", {"fontcolor": MUTED, "fontsize": 9})]),
+                             (" hires in each group: hires, share, and the share the year before.", {"fontcolor": MUTED, "fontsize": 9})]),
             param_zone(150, param, "Group by"),
         ]),
         sheet_zone(f"By_{card}"),
