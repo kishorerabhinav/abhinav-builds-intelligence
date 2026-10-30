@@ -53,12 +53,13 @@ Checked in Tableau with the HR example:
 - Dynamic zone visibility on containers and blank zones (views, selected-card
   strips).
 
-Bar charts with a dual-axis grey track and gold bar render (`examples/hr_diversity`,
-`By_*`) when their Marks card is empty. Adding tooltip and label fields to
-those sheets made them draw nothing, so their numbers go in the row label,
-built from FIXED calcs. Gantt layers from a helper CSV also drew nothing.
-Use a split test (one dashboard, the chart drawn several ways, each
-dropping one feature) before building on an unproven chart.
+- Bar charts with a dual-axis grey track and coloured bar, value labels and a
+  custom tooltip (`examples/hr_diversity`, `By_*`), as long as every field on
+  the Marks card is numeric. A field whose text comes from a parameter made the
+  sheet draw nothing (RULES.md). Gantt layers from a helper CSV also drew nothing.
+
+Before building on a chart pattern not listed here, send a split test: one
+dashboard with the chart drawn several ways, each dropping one feature.
 
 When the person sends back a .twbx Tableau has re-saved, read it: it shows
 how Tableau parsed every data source, field and sheet.

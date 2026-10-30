@@ -95,8 +95,6 @@ py_sel = emp.calc("PY selected %", "real", by_measure("py"), fmt="p0.0%")
 picked = f"CASE {measure.ref}\n" + "\n".join(f"WHEN '{t}' THEN IIF({c}, 1, 0)" for _, t, _, c, _ in METRICS) + "\nEND"
 cy_count = emp.calc("CY selected count", "integer", f"SUM(IF {period} = 'Current' THEN {picked} ELSE 0 END)", fmt="n#,##0")
 track = emp.calc("Track", "real", "MIN(1.0)")
-py_label = emp.calc("Year before label", "string",
-                    f"IIF(ISNULL({py_sel}), '', STR(ROUND({py_sel} * 100, 1)) + '% in ' + STR({YEAR_N} - 1))", role="measure")
 satisfaction = emp.calc("Satisfaction label", "string",
                         "CASE [satisfaction]\nWHEN 1 THEN 'Very unsatisfied'\nWHEN 2 THEN 'Unsatisfied'\nWHEN 3 THEN 'Neutral'\n"
                         "WHEN 4 THEN 'Satisfied'\nELSE 'Very satisfied'\nEND")
@@ -116,15 +114,7 @@ GROUPS = {}
 for card, (picker, options) in GROUPINGS.items():
     group = emp.calc(f"{card} group", "string", f"CASE {picker.ref}\n" + "\n".join(f"WHEN '{v}' THEN {f}" for v, f in options) + "\nEND")
     hires = emp.calc(f"{card} group hires", "integer", f"{{FIXED {group} : SUM(IIF(YEAR([hire_date]) = {YEAR_N}, 1, 0))}}")
-    # The row label carries the numbers: in Tableau, fields on the breakdown's Marks card blanked the
-    # sheet, while row labels render. Shares are FIXED per group so they can sit in a dimension.
-    picked_now = emp.calc(f"{card} group picked", "integer", f"{{FIXED {group} : SUM(IF YEAR([hire_date]) = {YEAR_N} THEN {picked} ELSE 0 END)}}")
-    prev_n = emp.calc(f"{card} group hires year before", "integer", f"{{FIXED {group} : SUM(IIF(YEAR([hire_date]) = {YEAR_N} - 1, 1, 0))}}")
-    picked_prev = emp.calc(f"{card} group picked year before", "integer",
-                           f"{{FIXED {group} : SUM(IF YEAR([hire_date]) = {YEAR_N} - 1 THEN {picked} ELSE 0 END)}}")
-    label = emp.calc(f"{card} group label", "string",
-                     f"{group} + ' (' + STR({hires}) + ')  ' + STR(ROUND({picked_now} / {hires} * 100, 1)) + '%'"
-                     f" + IIF({prev_n} > 0, '  vs ' + STR(ROUND({picked_prev} / {prev_n} * 100, 1)) + '%', '')")
+    label = emp.calc(f"{card} group label", "string", f"{group} + ' (' + STR({hires}) + ')'")
     hired = emp.calc(f"{card} group hired this year", "boolean", f"{hires} > 0")
     lit = lambda v: f'"{v}"' if "'" in v else f"'{v}'"  # Master's Degree goes in double quotes
     ranked = [(v, f) for v, f in options if v in ORDERS]
@@ -201,37 +191,24 @@ for key, title, *_ in METRICS:
                  style="<style-rule element='axis'>" + fixed_axis(val, -0.16, 1.02, "rows") + fixed_axis(area, -0.16, 1.02, "rows", sync=True)
                        + f"<format attr='display' class='0' field='{month.ref}' scope='cols' value='false' /></style-rule>")
 
-# Parameters are not put on the Tooltip shelf (no working sheet does that); the tooltip names
-# the measure and year through calcs instead.
-measure_name = emp.calc("Measure name", "string", measure.ref)
-year_name = emp.calc("Year name", "string", year.ref)
+def breakdown_sheet(name, card):
+    """Grey track and gold bar per group, labelled with this year's share and the year before.
 
-
-def breakdown_sheet(name, card, *, value_label=False, year_before_label=False, tooltip_counts=False, tooltip_names=False):
-    """Grey track and gold bar for each group. The keyword switches let a split test add marks-card
-    fields one group at a time; the defaults are the combination confirmed in Tableau."""
+    Split-tested in Tableau: numeric fields on the Marks card are fine, but a field whose text
+    comes from a parameter (the measure or year name, "% in 2021") made the whole sheet blank.
+    """
     g = GROUPS[card]
     row, order = F(emp, g["label"]), F(emp, g["sort"])
-    trk, cy, py, cnt, pyl = F(emp, track), F(emp, cy_sel), F(emp, py_sel), F(emp, cy_count), F(emp, py_label)
-    mname, yname = F(emp, measure_name), F(emp, year_name)
-    tips, tip_runs = [], []
-    if tooltip_counts:
-        tips += [("tooltip", cnt), ("tooltip", py)]
-        tip_runs += [(row, {"fontcolor": MUTED, "fontsize": 9}), "\n", (cy, {"fontcolor": INK, "fontsize": 10, "bold": "true"}), "\n",
-                     (cnt, {"fontcolor": MUTED, "fontsize": 9}), (" hires in this group", {"fontcolor": MUTED, "fontsize": 9}), "\n",
-                     ("Year before: ", {"fontcolor": MUTED, "fontsize": 9}), (py, {"fontcolor": MUTED, "fontsize": 9})]
-    if tooltip_names:
-        tips += [("tooltip", mname), ("tooltip", yname)]
-    tip = runs(tip_runs) if tip_runs else None
-    texts, label_runs = [], []
-    if value_label:
-        texts.append(("text", cy))
-        label_runs.append((cy, {"fontcolor": INK, "fontsize": 9, "bold": "true"}))
-    if year_before_label:
-        texts.append(("text", pyl))
-        label_runs += [("  ", {}), (pyl, {"fontcolor": MUTED, "fontsize": 8})]
+    trk, cy, py, cnt = F(emp, track), F(emp, cy_sel), F(emp, py_sel), F(emp, cy_count)
+    tips = [("tooltip", cnt), ("tooltip", py)]
+    tip = runs([(row, {"fontcolor": MUTED, "fontsize": 9}), "\n", ("This year: ", {"fontcolor": INK, "fontsize": 10}),
+                (cy, {"fontcolor": INK, "fontsize": 10, "bold": "true"}), "\n", (cnt, {"fontcolor": MUTED, "fontsize": 9}),
+                (" hires in this group counted", {"fontcolor": MUTED, "fontsize": 9}), "\n",
+                ("Year before: ", {"fontcolor": MUTED, "fontsize": 9}), (py, {"fontcolor": MUTED, "fontsize": 9})])
+    label = runs([(cy, {"fontcolor": INK, "fontsize": 9, "bold": "true"}), ("  vs ", {"fontcolor": MUTED, "fontsize": 8}),
+                  (py, {"fontcolor": MUTED, "fontsize": 8})])
     style = ("<style-rule element='axis'>" + fixed_axis(trk, 0, 1.0, "cols") + fixed_axis(cy, 0, 1.0, "cols", sync=True) + "</style-rule>"
-             f"<style-rule element='header'><format attr='width' field='{row.ref}' value='215' /></style-rule>"
+             f"<style-rule element='header'><format attr='width' field='{row.ref}' value='175' /></style-rule>"
              f"<style-rule element='label'><format attr='font-size' field='{row.ref}' value='9' />"
              f"<format attr='color' field='{row.ref}' value='{INK}' /></style-rule>")
     wb.worksheet(name, emp, rows=[row], cols=[trk, cy], dual_cols=True, sorts=[(row, order)],
@@ -239,9 +216,9 @@ def breakdown_sheet(name, card, *, value_label=False, year_before_label=False, t
                  panes=[pane("Bar", enc=tips, tooltip=tip),
                         pane("Bar", enc=tips, tooltip=tip, pane_id=1, axis=trk,
                              mark_fmt={"mark-color": TRACK, "size": "1.6", "has-stroke": "false"}),
-                        pane("Bar", enc=tips + texts, tooltip=tip, pane_id=2, axis=cy, label=runs(label_runs) if label_runs else None,
+                        pane("Bar", enc=tips + [("text", cy), ("text", py)], tooltip=tip, pane_id=2, axis=cy, label=label,
                              mark_fmt={"mark-color": GOLD, "size": "1.6", "has-stroke": "false",
-                                       "mark-labels-show": "true" if texts else "false", "mark-labels-cull": "false"})])
+                                       "mark-labels-show": "true", "mark-labels-cull": "false"})])
 
 
 for card in ("Role", "Background", "Performance"):
@@ -299,7 +276,7 @@ def breakdown_card(card, heading, param):
         text_zone(26, [(measure, {"fontcolor": INK, "fontsize": 12, "bold": "true"}), (f" by {heading}", {"fontcolor": INK, "fontsize": 12, "bold": "true"})]),
         N("horz", 46, kids=[
             text_zone(None, [("Share of ", {"fontcolor": MUTED, "fontsize": 9}), (year, {"fontcolor": MUTED, "fontsize": 9}),
-                             (" hires in each group: hires, share, and the share the year before.", {"fontcolor": MUTED, "fontsize": 9})]),
+                             (" hires in each group, with the year before in grey.", {"fontcolor": MUTED, "fontsize": 9})]),
             param_zone(150, param, "Group by"),
         ]),
         sheet_zone(f"By_{card}"),

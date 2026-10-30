@@ -37,7 +37,7 @@ A lookup by name or id failed while loading. Seen twice:
 | Default colours instead of yours | A colour palette needs the field declared as a `<column-instance>` on the data source, beside the palette in the data source `<style>`. |
 | `<Parameters.X>` blank in a label or tooltip | The parameter must also be on the Marks card (an encoding). |
 | Points that share an x value merge (a dash shows as a dot) | Give each point its own id and put it on Path. |
-| A chart draws nothing, not even row headers, though the data matches its filter | Split-tested in Tableau: the same bar chart renders with an empty Marks card and goes blank once tooltip and label fields are added (data, filters, sort, formatting and the dual axis were all ruled out). Keep breakdown Marks cards empty and put the numbers in the row label as a string built from FIXED calcs. Which marks-card field is at fault is still open. |
+| A chart draws nothing, not even row headers, though the data matches its filter | Split-tested in Tableau on a bar chart with a dimension on Rows: numeric fields on the Marks card render (shares, counts, even when calculated with a parameter), but a field whose *text* comes from a parameter blanks the whole sheet: a calc that just returns a parameter (measure or year name), or a label like `STR(INT(year) - 1)`. Keep such fields off the Marks card; show numbers instead and put parameter text in dashboard text zones. |
 
 ## House style used so far
 
