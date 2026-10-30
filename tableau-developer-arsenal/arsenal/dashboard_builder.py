@@ -210,6 +210,7 @@ QUIET_STYLE = (
     "<style-rule element='table-div'><format attr='line-visibility' scope='cols' value='off' /><format attr='stroke-size' scope='cols' value='0' />"
     "<format attr='line-visibility' scope='rows' value='off' /><format attr='stroke-size' scope='rows' value='0' /></style-rule>"
     "<style-rule element='header'><format attr='band-color' scope='rows' value='#00000000' /><format attr='band-color' scope='cols' value='#00000000' /></style-rule>"
+    "<style-rule element='pane'><format attr='band-color' scope='rows' value='#00000000' /><format attr='band-color' scope='cols' value='#00000000' /></style-rule>"
     "<style-rule element='worksheet'><format attr='display-field-labels' scope='rows' value='false' />"
     "<format attr='display-field-labels' scope='cols' value='false' /></style-rule>")
 

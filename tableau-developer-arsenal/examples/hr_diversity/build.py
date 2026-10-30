@@ -153,7 +153,7 @@ RIGHT = "<style-rule element='cell'><format attr='text-align' value='right' /><f
 zero, one = emp.zero_one()
 yr, pyr = F(emp, year_num), F(emp, prev_year_num)
 
-mut, bold = {"fontcolor": MUTED, "fontsize": 11}, {"fontcolor": INK, "fontsize": 11, "bold": "true"}
+mut, bold = {"fontcolor": MUTED, "fontsize": 10}, {"fontcolor": INK, "fontsize": 10, "bold": "true"}
 cyn, dcy, dpt = F(emp, cy_hires), F(emp, dv["cy"]), F(emp, d_pts)
 wb.worksheet("Summary", emp, tooltip_none=True, panes=[pane(
     "Text", cell=LEFT, mark_fmt={"mark-labels-show": "true"},
@@ -168,13 +168,12 @@ for key, title, _, _, coloured in METRICS:
     wb.worksheet(f"KPI_{key}", emp, tooltip_none=True, panes=[pane(
         "Text", cell=CENTER, mark_fmt={"mark-labels-show": "true"},
         enc=[("lod", F(emp, m["key"])), ("lod", F(emp, zero)), ("lod", F(emp, one)), ("text", cy), ("text", F(emp, cy_hires))],
-        label=runs([(cy, {"fontcolor": INK, "fontsize": 28, "fontname": SERIF}), "\n",
+        label=runs([(cy, {"fontcolor": INK, "fontsize": 24, "fontname": SERIF}), "\n",
                     (F(emp, cy_hires), {"fontcolor": MUTED, "fontsize": 9}), (" hires this year", {"fontcolor": MUTED, "fontsize": 9})]))])
     # The original's change chip: a tinted square with the change, coloured by direction.
     up_c, dn_c = (UP, DOWN) if coloured else (MUTED, MUTED)
     wb.worksheet(f"Chip_{key}", emp, tooltip_none=True, panes=[pane(
-        "Square", cell=CENTER, enc=[("text", up), ("text", dn)],
-        mark_fmt={"mark-labels-show": "true", "mark-color": CHIP, "size": "14.5"},
+        "Text", cell=CENTER, enc=[("text", up), ("text", dn)], mark_fmt={"mark-labels-show": "true"},
         label=runs([(up, {"fontcolor": up_c, "fontsize": 10, "bold": "true"}), (dn, {"fontcolor": dn_c, "fontsize": 10, "bold": "true"})]))])
     # The original's progress bar under each card title: this year's share on a grey track.
     trk, val = F(emp, track), F(emp, m["cy"])
@@ -216,7 +215,7 @@ for card_key in GROUPINGS:
                  filters=[(F(emp, in_window), "true"), (F(emp, g["hired"]), "true")],
                  panes=[pane("Bar", enc=tips, tooltip=tip),
                         pane("Bar", enc=tips + [("text", cy), ("text", n), ("text", py)], tooltip=tip, pane_id=1, axis=trk,
-                             label=value, cell=LEFT,
+                             label=value,
                              mark_fmt={"mark-color": TRACK, "size": "1.0", "has-stroke": "false", "mark-labels-show": "true", "mark-labels-cull": "false"}),
                         pane("Bar", enc=tips, tooltip=tip, pane_id=2, axis=cy,
                              mark_fmt={"mark-color": ACCENT, "size": "1.0", "has-stroke": "false"})],
@@ -275,7 +274,7 @@ def spaced(items, gap):
 
 # Title block (original layout)
 home.float(text_zone(None, [t("Diversity in", 12, MUTED), "\n", t("HUMAN RESOURCES", 28, INK)]), 30, 22, 520, 78)
-home.float(sheet_zone("Summary"), 32, 102, 780, 30)
+home.float(sheet_zone("Summary"), 30, 100, 790, 40)
 
 # View switch with the original's icons: dark icon for the view showing, grey for the other
 home.float(sheet_zone("View_Toggle"), 820, 26, 156, 70)
@@ -314,8 +313,8 @@ def kpi_card(key, title, definition):
         text_zone(16, [t(definition, 8, MUTED)]),
         sheet_zone(f"Bar_{key}", 12),
         blank_zone(4),
-        sheet_zone(f"KPI_{key}", 62),
-        N("horz", 26, kids=[blank_zone(), sheet_zone(f"Chip_{key}", 110), blank_zone()]),
+        sheet_zone(f"KPI_{key}", 84),
+        N("horz", 28, kids=[blank_zone(), N("vert", 120, bg=CHIP, kids=[sheet_zone(f"Chip_{key}")]), blank_zone()]),
         text_zone(18, [t("vs the year before", 8, MUTED)]),
         blank_zone(6),
         text_zone(18, [t("Monthly share   ", 8, MUTED), t("■ ", 8, ACCENT), (year, {"fontcolor": MUTED, "fontsize": 8}),
@@ -327,12 +326,12 @@ def kpi_card(key, title, definition):
 def breakdown_card(card_key, word):
     g = GROUPS[card_key]
     return card([
-        text_zone(24, [(measure, {"fontcolor": INK, "fontsize": 11, "bold": "true"}), t(f" by {word}", 11, INK, bold="true")]),
-        N("horz", 40, kids=[
-            text_zone(None, [t("Share of hires in each group,", 8, MUTED), "\n", t("this year vs the year before", 8, MUTED)]),
-            text_zone(46, [t("View by", 8, MUTED)]),
-            param_zone(128, g["picker"], "", show_title="false"),
+        N("horz", 30, kids=[
+            text_zone(None, [(measure, {"fontcolor": INK, "fontsize": 11, "bold": "true"}), t(f" by {word}", 11, INK, bold="true")]),
+            text_zone(44, [t("View by", 8, MUTED)]),
+            param_zone(124, g["picker"], "", show_title="false"),
         ]),
+        text_zone(20, [t("Share of hires in each group, this year vs the year before", 8, MUTED)]),
         blank_zone(6),
         sheet_zone(f"By_{card_key}"),
     ])
@@ -340,7 +339,7 @@ def breakdown_card(card_key, word):
 
 CW = 1176 - 24
 overview = N("vert", None, show=OV, kids=[
-    N("horz", 330, kids=spaced([kpi_card(k, title, d) for k, title, d, *_ in METRICS], 14)),
+    N("horz", 356, kids=spaced([kpi_card(k, title, d) for k, title, d, *_ in METRICS], 14)),
     text_zone(34, [t("Each card shows the share of the year's hires and the change from the year before; "
                      "bars compare each month with the same month a year earlier. Click a card to chart it below.", 8, MUTED)]),
     N("horz", None, kids=spaced([breakdown_card("Role", "role"), breakdown_card("Background", "background"),
