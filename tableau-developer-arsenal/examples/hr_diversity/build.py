@@ -90,8 +90,10 @@ def by_measure(part):
 in_window = emp.calc("In comparison window", "boolean", f"NOT ISNULL({period})")
 cy_sel = emp.calc("CY selected %", "real", by_measure("cy"), fmt="p0.0%")
 py_sel = emp.calc("PY selected %", "real", by_measure("py"), fmt="p0.0%")
-picked = f"CASE {measure.ref}\n" + "\n".join(f"WHEN '{t}' THEN {c}" for _, t, _, c, _ in METRICS) + "\nEND"
-cy_count = emp.calc("CY selected count", "integer", f"SUM(IF {period} = 'Current' AND ({picked}) THEN 1 ELSE 0 END)", fmt="n#,##0")
+# 1 when the person counts towards the chosen measure. A CASE that returns true/false made
+# every sheet using it draw nothing, so it returns numbers.
+picked = f"CASE {measure.ref}\n" + "\n".join(f"WHEN '{t}' THEN IIF({c}, 1, 0)" for _, t, _, c, _ in METRICS) + "\nEND"
+cy_count = emp.calc("CY selected count", "integer", f"SUM(IF {period} = 'Current' THEN {picked} ELSE 0 END)", fmt="n#,##0")
 track = emp.calc("Track", "real", "MIN(1.0)")
 py_label = emp.calc("Year before label", "string",
                     f"IIF(ISNULL({py_sel}), '', STR(ROUND({py_sel} * 100, 1)) + '% in ' + STR({YEAR_N} - 1))", role="measure")
@@ -197,7 +199,8 @@ measure_name = emp.calc("Measure name", "string", measure.ref)
 year_name = emp.calc("Year name", "string", year.ref)
 
 
-def breakdown_sheet(name, card, *, tooltip_params=False, sort=True, fixed_size=False, styles=True, filters=True, minimal=False):
+def breakdown_sheet(name, card, *, tooltip_params=False, sort=True, fixed_size=False, styles=True, filters=True, minimal=False,
+                    dual=True, fields=True):
     """The breakdown chart. The keyword switches exist so a split test can drop one feature at a time."""
     g = GROUPS[card]
     row, order = F(emp, g["label"]), F(emp, g["sort"])
@@ -207,7 +210,9 @@ def breakdown_sheet(name, card, *, tooltip_params=False, sort=True, fixed_size=F
                 (yname, {"fontcolor": INK, "fontsize": 10}), (": ", {"fontcolor": INK, "fontsize": 10}), (cy, {"fontcolor": INK, "fontsize": 10, "bold": "true"}), "\n",
                 (cnt, {"fontcolor": MUTED, "fontsize": 9}), (" hires in this group", {"fontcolor": MUTED, "fontsize": 9}), "\n",
                 ("Year before: ", {"fontcolor": MUTED, "fontsize": 9}), (py, {"fontcolor": MUTED, "fontsize": 9})])
-    common = [("tooltip", cnt), ("tooltip", py), ("tooltip", mname), ("tooltip", yname)]
+    common = [("tooltip", cnt), ("tooltip", py), ("tooltip", mname), ("tooltip", yname)] if fields else []
+    if not fields:
+        tip = None
     keep = [(F(emp, in_window), "true"), (F(emp, g["hired"]), "true")] if filters else []
     if minimal:
         wb.worksheet(name, emp, rows=[row], cols=[cy], filters=keep, panes=[pane("Bar", mark_fmt={"mark-color": GOLD})])
@@ -217,13 +222,22 @@ def breakdown_sheet(name, card, *, tooltip_params=False, sort=True, fixed_size=F
         style += (f"<style-rule element='header'><format attr='width' field='{row.ref}' value='175' /></style-rule>"
                   f"<style-rule element='label'><format attr='font-size' field='{row.ref}' value='9' />"
                   f"<format attr='color' field='{row.ref}' value='{INK}' /></style-rule>")
+    value_label = runs([(cy, {"fontcolor": INK, "fontsize": 9, "bold": "true"}), ("  ", {}), (pyl, {"fontcolor": MUTED, "fontsize": 8})])
+    if not dual:
+        style = style.replace(fixed_axis(trk, 0, 1.0, "cols") + fixed_axis(cy, 0, 1.0, "cols", sync=True), fixed_axis(cy, 0, 1.0, "cols"))
+        wb.worksheet(name, emp, rows=[row], cols=[cy], sorts=[(row, order)] if sort else [], filters=keep, style=style,
+                     panes=[pane("Bar", enc=common + ([("text", cy), ("text", pyl)] if fields else []), tooltip=tip,
+                                 label=value_label if fields else None,
+                                 mark_fmt={"mark-color": GOLD, "mark-labels-show": "true" if fields else "false"})])
+        return
     wb.worksheet(name, emp, rows=[row], cols=[trk, cy], dual_cols=True, sorts=[(row, order)] if sort else [], filters=keep,
                  panes=[pane("Bar", enc=common, tooltip=tip),
                         pane("Bar", enc=common, tooltip=tip, pane_id=1, axis=trk, fixed_size=fixed_size,
                              mark_fmt={"mark-color": TRACK, "size": "1.6", "has-stroke": "false"}),
-                        pane("Bar", enc=common + [("text", cy), ("text", pyl)], tooltip=tip, pane_id=2, axis=cy, fixed_size=fixed_size,
-                             mark_fmt={"mark-color": GOLD, "size": "1.6", "has-stroke": "false", "mark-labels-show": "true", "mark-labels-cull": "false"},
-                             label=runs([(cy, {"fontcolor": INK, "fontsize": 9, "bold": "true"}), ("  ", {}), (pyl, {"fontcolor": MUTED, "fontsize": 8})]))],
+                        pane("Bar", enc=common + ([("text", cy), ("text", pyl)] if fields else []), tooltip=tip, pane_id=2, axis=cy,
+                             fixed_size=fixed_size, label=value_label if fields else None,
+                             mark_fmt={"mark-color": GOLD, "size": "1.6", "has-stroke": "false",
+                                       "mark-labels-show": "true" if fields else "false", "mark-labels-cull": "false"})],
                  style=style)
 
 
