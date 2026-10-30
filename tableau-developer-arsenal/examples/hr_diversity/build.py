@@ -229,7 +229,7 @@ vv, vo, vl = F(vw, "[view]"), F(vw, "[view_order]", "min"), F(vw, "[view_label]"
 vz, v1 = vw.zero_one()
 wb.worksheet("View_Toggle", vw, rows=[vv], sorts=[(vv, vo)], tooltip_none=True,
              panes=[pane("Text", enc=[("text", vl), ("color", F(vw, v_on)), ("lod", F(vw, vz)), ("lod", F(vw, v1))],
-                         mark_fmt={"mark-labels-show": "true"}, label=runs([(vl, {"fontsize": 10})]), cell=RIGHT)],
+                         mark_fmt={"mark-labels-show": "true"}, label=runs([(vl, {"fontsize": 10})]), cell=LEFT)],
              style=f"<style-rule element='header'><format attr='width' field='{vv.ref}' value='1' /></style-rule>"
                    f"<style-rule element='label'><format attr='color' field='{vv.ref}' value='#00000000' /><format attr='font-size' field='{vv.ref}' value='1' /></style-rule>")
 
@@ -277,11 +277,13 @@ home.float(text_zone(None, [t("Diversity in", 12, MUTED), "\n", t("HUMAN RESOURC
 home.float(sheet_zone("Summary"), 30, 100, 790, 40)
 
 # View switch with the original's icons: dark icon for the view showing, grey for the other
-home.float(sheet_zone("View_Toggle"), 820, 26, 156, 70)
 home.float(image_zone(img["view-overview-on"], show=OV), 982, 32, 24, 24)
 home.float(image_zone(img["view-overview-off"], show=TB), 982, 32, 24, 24)
 home.float(image_zone(img["view-table-on"], show=TB), 982, 64, 24, 24)
 home.float(image_zone(img["view-table-off"], show=OV), 982, 64, 24, 24)
+# The switch sheet floats over its icons with a transparent background, so clicking the
+# words or an icon switches the view, as the original's icons do.
+home.float(sheet_zone("View_Toggle"), 846, 26, 168, 70)
 
 # Filters and Legends switches, each showing a small panel below them (hidden until switched on)
 filter_panel = N("vert", None, bg=CARD, border=BORDER, pad=6, hidden_by_user="true", kids=[param_zone(None, year, "Hiring year")])
