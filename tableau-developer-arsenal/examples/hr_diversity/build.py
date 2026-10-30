@@ -199,46 +199,41 @@ measure_name = emp.calc("Measure name", "string", measure.ref)
 year_name = emp.calc("Year name", "string", year.ref)
 
 
-def breakdown_sheet(name, card, *, tooltip_params=False, sort=True, fixed_size=False, styles=True, filters=True, minimal=False,
-                    dual=True, fields=True):
-    """The breakdown chart. The keyword switches exist so a split test can drop one feature at a time."""
+def breakdown_sheet(name, card, *, value_label=True, year_before_label=True, tooltip_counts=False, tooltip_names=False):
+    """Grey track and gold bar for each group. The keyword switches let a split test add marks-card
+    fields one group at a time; the defaults are the combination confirmed in Tableau."""
     g = GROUPS[card]
     row, order = F(emp, g["label"]), F(emp, g["sort"])
     trk, cy, py, cnt, pyl = F(emp, track), F(emp, cy_sel), F(emp, py_sel), F(emp, cy_count), F(emp, py_label)
-    mname, yname = (measure, year) if tooltip_params else (F(emp, measure_name), F(emp, year_name))
-    tip = runs([(row, {"fontcolor": MUTED, "fontsize": 9}), "\n", (mname, {"fontcolor": INK, "fontsize": 10}), (" in ", {"fontcolor": INK, "fontsize": 10}),
-                (yname, {"fontcolor": INK, "fontsize": 10}), (": ", {"fontcolor": INK, "fontsize": 10}), (cy, {"fontcolor": INK, "fontsize": 10, "bold": "true"}), "\n",
-                (cnt, {"fontcolor": MUTED, "fontsize": 9}), (" hires in this group", {"fontcolor": MUTED, "fontsize": 9}), "\n",
-                ("Year before: ", {"fontcolor": MUTED, "fontsize": 9}), (py, {"fontcolor": MUTED, "fontsize": 9})])
-    common = [("tooltip", cnt), ("tooltip", py), ("tooltip", mname), ("tooltip", yname)] if fields else []
-    if not fields:
-        tip = None
-    keep = [(F(emp, in_window), "true"), (F(emp, g["hired"]), "true")] if filters else []
-    if minimal:
-        wb.worksheet(name, emp, rows=[row], cols=[cy], filters=keep, panes=[pane("Bar", mark_fmt={"mark-color": GOLD})])
-        return
-    style = "<style-rule element='axis'>" + fixed_axis(trk, 0, 1.0, "cols") + fixed_axis(cy, 0, 1.0, "cols", sync=True) + "</style-rule>"
-    if styles:
-        style += (f"<style-rule element='header'><format attr='width' field='{row.ref}' value='175' /></style-rule>"
-                  f"<style-rule element='label'><format attr='font-size' field='{row.ref}' value='9' />"
-                  f"<format attr='color' field='{row.ref}' value='{INK}' /></style-rule>")
-    value_label = runs([(cy, {"fontcolor": INK, "fontsize": 9, "bold": "true"}), ("  ", {}), (pyl, {"fontcolor": MUTED, "fontsize": 8})])
-    if not dual:
-        style = style.replace(fixed_axis(trk, 0, 1.0, "cols") + fixed_axis(cy, 0, 1.0, "cols", sync=True), fixed_axis(cy, 0, 1.0, "cols"))
-        wb.worksheet(name, emp, rows=[row], cols=[cy], sorts=[(row, order)] if sort else [], filters=keep, style=style,
-                     panes=[pane("Bar", enc=common + ([("text", cy), ("text", pyl)] if fields else []), tooltip=tip,
-                                 label=value_label if fields else None,
-                                 mark_fmt={"mark-color": GOLD, "mark-labels-show": "true" if fields else "false"})])
-        return
-    wb.worksheet(name, emp, rows=[row], cols=[trk, cy], dual_cols=True, sorts=[(row, order)] if sort else [], filters=keep,
-                 panes=[pane("Bar", enc=common, tooltip=tip),
-                        pane("Bar", enc=common, tooltip=tip, pane_id=1, axis=trk, fixed_size=fixed_size,
+    mname, yname = F(emp, measure_name), F(emp, year_name)
+    tips, tip_runs = [], []
+    if tooltip_counts:
+        tips += [("tooltip", cnt), ("tooltip", py)]
+        tip_runs += [(row, {"fontcolor": MUTED, "fontsize": 9}), "\n", (cy, {"fontcolor": INK, "fontsize": 10, "bold": "true"}), "\n",
+                     (cnt, {"fontcolor": MUTED, "fontsize": 9}), (" hires in this group", {"fontcolor": MUTED, "fontsize": 9}), "\n",
+                     ("Year before: ", {"fontcolor": MUTED, "fontsize": 9}), (py, {"fontcolor": MUTED, "fontsize": 9})]
+    if tooltip_names:
+        tips += [("tooltip", mname), ("tooltip", yname)]
+    tip = runs(tip_runs) if tip_runs else None
+    texts, label_runs = [], []
+    if value_label:
+        texts.append(("text", cy))
+        label_runs.append((cy, {"fontcolor": INK, "fontsize": 9, "bold": "true"}))
+    if year_before_label:
+        texts.append(("text", pyl))
+        label_runs += [("  ", {}), (pyl, {"fontcolor": MUTED, "fontsize": 8})]
+    style = ("<style-rule element='axis'>" + fixed_axis(trk, 0, 1.0, "cols") + fixed_axis(cy, 0, 1.0, "cols", sync=True) + "</style-rule>"
+             f"<style-rule element='header'><format attr='width' field='{row.ref}' value='175' /></style-rule>"
+             f"<style-rule element='label'><format attr='font-size' field='{row.ref}' value='9' />"
+             f"<format attr='color' field='{row.ref}' value='{INK}' /></style-rule>")
+    wb.worksheet(name, emp, rows=[row], cols=[trk, cy], dual_cols=True, sorts=[(row, order)],
+                 filters=[(F(emp, in_window), "true"), (F(emp, g["hired"]), "true")], style=style,
+                 panes=[pane("Bar", enc=tips, tooltip=tip),
+                        pane("Bar", enc=tips, tooltip=tip, pane_id=1, axis=trk,
                              mark_fmt={"mark-color": TRACK, "size": "1.6", "has-stroke": "false"}),
-                        pane("Bar", enc=common + ([("text", cy), ("text", pyl)] if fields else []), tooltip=tip, pane_id=2, axis=cy,
-                             fixed_size=fixed_size, label=value_label if fields else None,
+                        pane("Bar", enc=tips + texts, tooltip=tip, pane_id=2, axis=cy, label=runs(label_runs) if label_runs else None,
                              mark_fmt={"mark-color": GOLD, "size": "1.6", "has-stroke": "false",
-                                       "mark-labels-show": "true" if fields else "false", "mark-labels-cull": "false"})],
-                 style=style)
+                                       "mark-labels-show": "true" if texts else "false", "mark-labels-cull": "false"})])
 
 
 for card in ("Role", "Background", "Performance"):
