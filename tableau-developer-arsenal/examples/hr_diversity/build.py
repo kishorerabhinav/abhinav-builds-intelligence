@@ -69,8 +69,9 @@ METRICS = [  # key, title, definition, row test, change coloured by direction
 ]
 period = emp.calc("Period", "string", f"IF YEAR([hire_date]) = {YEAR_N} THEN 'Current'\nELSEIF YEAR([hire_date]) = {YEAR_N} - 1 THEN 'Previous'\nEND")
 cy_hires = emp.calc("Hires this year", "integer", f"SUM(IF {period} = 'Current' THEN 1 ELSE 0 END)", fmt="n#,##0")
-year_num = emp.calc("Year", "integer", f"MIN({YEAR_N})", fmt="*0")
-prev_year_num = emp.calc("Year before", "integer", f"MIN({YEAR_N} - 1)", fmt="*0")
+# Years are dates shown with a date format, like the original's '*mmmm yyyy'; '*0' on a number showed ####.
+year_num = emp.calc("Year", "date", f"MIN(MAKEDATE({YEAR_N}, 1, 1))", role="measure", typ="quantitative", fmt="*yyyy")
+prev_year_num = emp.calc("Year before", "date", f"MIN(MAKEDATE({YEAR_N} - 1, 1, 1))", role="measure", typ="quantitative", fmt="*yyyy")
 EM = {}
 for key, title, _, cond, _ in METRICS:
     m = {}
@@ -87,8 +88,7 @@ for key, title, _, cond, _ in METRICS:
     EM[key] = m
 dv = EM["Diversity"]
 pts = f"({dv['cy']} - {dv['py']}) * 100"
-d_up = emp.calc("Diversity points up", "real", f"IIF({pts} >= 0, {pts}, NULL)", fmt='*"up "0.0" pts"')
-d_down = emp.calc("Diversity points down", "real", f"IIF({pts} < 0, {pts}, NULL)", fmt='*"down "0.0" pts";"down "0.0" pts"')
+d_pts = emp.calc("Diversity change in points", "real", pts, fmt="*▲ 0.0;▼ 0.0")  # symbols only, as the chips use
 show_overview = emp.calc("Show overview", "boolean", f"{view.ref} = 'Overview'")
 show_table = emp.calc("Show employee list", "boolean", f"{view.ref} = 'Employee list'")
 track = emp.calc("Track", "real", "MIN(1.0)")
@@ -154,12 +154,12 @@ zero, one = emp.zero_one()
 yr, pyr = F(emp, year_num), F(emp, prev_year_num)
 
 mut, bold = {"fontcolor": MUTED, "fontsize": 11}, {"fontcolor": INK, "fontsize": 11, "bold": "true"}
-cyn, dcy, dup, ddn = F(emp, cy_hires), F(emp, dv["cy"]), F(emp, d_up), F(emp, d_down)
+cyn, dcy, dpt = F(emp, cy_hires), F(emp, dv["cy"]), F(emp, d_pts)
 wb.worksheet("Summary", emp, tooltip_none=True, panes=[pane(
     "Text", cell=LEFT, mark_fmt={"mark-labels-show": "true"},
-    enc=[("text", cyn), ("text", yr), ("text", dcy), ("text", dup), ("text", ddn), ("text", pyr)],
+    enc=[("text", cyn), ("text", yr), ("text", dcy), ("text", dpt), ("text", pyr)],
     label=runs([("Of the ", mut), (cyn, bold), (" people hired in ", mut), (yr, bold), (", ", mut), (dcy, bold),
-                (" were diverse (female or a person of color), ", mut), (dup, bold), (ddn, bold), (" on the ", mut),
+                (" were diverse (female or a person of color), ", mut), (dpt, bold), (" pts on the ", mut),
                 (pyr, bold), (" hiring class.", mut)]))])
 
 for key, title, _, _, coloured in METRICS:
@@ -167,9 +167,9 @@ for key, title, _, _, coloured in METRICS:
     cy, up, dn = F(emp, m["cy"]), F(emp, m["up"]), F(emp, m["down"])
     wb.worksheet(f"KPI_{key}", emp, tooltip_none=True, panes=[pane(
         "Text", cell=CENTER, mark_fmt={"mark-labels-show": "true"},
-        enc=[("lod", F(emp, m["key"])), ("lod", F(emp, zero)), ("lod", F(emp, one)), ("text", cy), ("text", yr)],
-        label=runs([(cy, {"fontcolor": INK, "fontsize": 30, "fontname": SERIF}), "\n",
-                    (yr, {"fontcolor": MUTED, "fontsize": 9}), (" hires", {"fontcolor": MUTED, "fontsize": 9})]))])
+        enc=[("lod", F(emp, m["key"])), ("lod", F(emp, zero)), ("lod", F(emp, one)), ("text", cy), ("text", F(emp, cy_hires))],
+        label=runs([(cy, {"fontcolor": INK, "fontsize": 28, "fontname": SERIF}), "\n",
+                    (F(emp, cy_hires), {"fontcolor": MUTED, "fontsize": 9}), (" hires this year", {"fontcolor": MUTED, "fontsize": 9})]))])
     # The original's change chip: a tinted square with the change, coloured by direction.
     up_c, dn_c = (UP, DOWN) if coloured else (MUTED, MUTED)
     wb.worksheet(f"Chip_{key}", emp, tooltip_none=True, panes=[pane(
@@ -195,7 +195,8 @@ for key, title, *_ in METRICS:
                         pane("Bar", pane_id=2, axis=now, axis_attr="y-axis-name",
                              mark_fmt={"mark-color": ACCENT, "size": "0.6", "has-stroke": "false"})],
                  style="<style-rule element='axis'>" + fixed_axis(before, 0, 1.0, "rows") + fixed_axis(now, 0, 1.0, "rows", sync=True) + "</style-rule>"
-                       + f"<style-rule element='label'><format attr='font-size' field='{month.ref}' value='7' />"
+                       + f"<style-rule element='label'><format attr='font-size' field='{month.ref}' value='6' />"
+                       + f"<format attr='text-orientation' field='{month.ref}' value='0' />"
                        + f"<format attr='color' field='{month.ref}' value='{MUTED}' /></style-rule>")
 
 for card_key in GROUPINGS:
@@ -215,13 +216,14 @@ for card_key in GROUPINGS:
                  filters=[(F(emp, in_window), "true"), (F(emp, g["hired"]), "true")],
                  panes=[pane("Bar", enc=tips, tooltip=tip),
                         pane("Bar", enc=tips + [("text", cy), ("text", n), ("text", py)], tooltip=tip, pane_id=1, axis=trk,
-                             label=value, cell=RIGHT,
-                             mark_fmt={"mark-color": TRACK, "size": "1.65", "has-stroke": "false", "mark-labels-show": "true", "mark-labels-cull": "false"}),
+                             label=value, cell=LEFT,
+                             mark_fmt={"mark-color": TRACK, "size": "1.0", "has-stroke": "false", "mark-labels-show": "true", "mark-labels-cull": "false"}),
                         pane("Bar", enc=tips, tooltip=tip, pane_id=2, axis=cy,
-                             mark_fmt={"mark-color": ACCENT, "size": "1.65", "has-stroke": "false"})],
-                 style="<style-rule element='axis'>" + fixed_axis(trk, 0, 1.0, "cols") + fixed_axis(cy, 0, 1.0, "cols", sync=True) + "</style-rule>"
-                       + f"<style-rule element='header'><format attr='width' field='{row.ref}' value='150' /></style-rule>"
-                       + f"<style-rule element='label'><format attr='font-size' field='{row.ref}' value='10' />"
+                             mark_fmt={"mark-color": ACCENT, "size": "1.0", "has-stroke": "false"})],
+                 # The axis runs past the track's end (1.0) so the value label sits in clear space to its right.
+                 style="<style-rule element='axis'>" + fixed_axis(trk, 0, 1.62, "cols") + fixed_axis(cy, 0, 1.62, "cols", sync=True) + "</style-rule>"
+                       + f"<style-rule element='header'><format attr='width' field='{row.ref}' value='128' /></style-rule>"
+                       + f"<style-rule element='label'><format attr='font-size' field='{row.ref}' value='9' />"
                        + f"<format attr='color' field='{row.ref}' value='{INK}' /></style-rule>")
 
 vv, vo, vl = F(vw, "[view]"), F(vw, "[view_order]", "min"), F(vw, "[view_label]")
@@ -276,11 +278,11 @@ home.float(text_zone(None, [t("Diversity in", 12, MUTED), "\n", t("HUMAN RESOURC
 home.float(sheet_zone("Summary"), 32, 102, 780, 30)
 
 # View switch with the original's icons: dark icon for the view showing, grey for the other
-home.float(sheet_zone("View_Toggle"), 846, 26, 128, 70)
-home.float(image_zone(img["view-overview-on"], show=OV), 980, 30, 26, 26)
-home.float(image_zone(img["view-overview-off"], show=TB), 980, 30, 26, 26)
-home.float(image_zone(img["view-table-on"], show=TB), 980, 64, 26, 26)
-home.float(image_zone(img["view-table-off"], show=OV), 980, 64, 26, 26)
+home.float(sheet_zone("View_Toggle"), 820, 26, 156, 70)
+home.float(image_zone(img["view-overview-on"], show=OV), 982, 32, 24, 24)
+home.float(image_zone(img["view-overview-off"], show=TB), 982, 32, 24, 24)
+home.float(image_zone(img["view-table-on"], show=TB), 982, 64, 24, 24)
+home.float(image_zone(img["view-table-off"], show=OV), 982, 64, 24, 24)
 
 # Filters and Legends switches, each showing a small panel below them (hidden until switched on)
 filter_panel = N("vert", None, bg=CARD, border=BORDER, pad=6, hidden_by_user="true", kids=[param_zone(None, year, "Hiring year")])
@@ -294,12 +296,12 @@ home.float(toggle_button(legend_panel, img["switch-on"], img["switch-off"]), 115
 
 # Side panel (original): logo, export buttons, credit
 home.float(card([
-    image_zone(img["rwfd-logo"], 64), text_zone(22, [t("#RWFD Solutions", 7, MUTED)]), blank_zone(1, bg=BORDER),
+    image_zone(img["rwfd-logo"], 64), text_zone(30, [t("#RWFD", 7, MUTED), "\n", t("Solutions", 7, MUTED)]), blank_zone(1, bg=BORDER),
     blank_zone(), text_zone(20, [t("EXPORT", 7, MUTED)]), blank_zone(8),
     export_button("pdf", img["export-pdf"], 30), blank_zone(12), export_button("powerpoint", img["export-ppt"], 30),
     blank_zone(12), export_button("crosstab", img["export-xlsx"], 30), blank_zone(24), blank_zone(1, bg=BORDER),
-    text_zone(40, [t("DESIGN:", 7, MUTED), "\n", t("ABHINAV KR", 7, MUTED)]),
-], pad=10), 1196, 160, 80, 916)
+    text_zone(40, [t("DESIGN:", 6, MUTED), "\n", t("ABHINAV KR", 6, MUTED)]),
+], pad=8), 1190, 160, 86, 916)
 
 
 def kpi_card(key, title, definition):
@@ -327,25 +329,24 @@ def breakdown_card(card_key, word):
     return card([
         text_zone(24, [(measure, {"fontcolor": INK, "fontsize": 11, "bold": "true"}), t(f" by {word}", 11, INK, bold="true")]),
         N("horz", 40, kids=[
-            text_zone(None, [t("Shows the distribution of ", 8, MUTED), (measure, {"fontcolor": MUTED, "fontsize": 8}),
-                             t(" across groups, this year against the year before.", 8, MUTED)]),
-            text_zone(48, [t("View by:", 8, MUTED)]),
-            param_zone(124, g["picker"], ""),
+            text_zone(None, [t("Share of hires in each group,", 8, MUTED), "\n", t("this year vs the year before", 8, MUTED)]),
+            text_zone(46, [t("View by", 8, MUTED)]),
+            param_zone(128, g["picker"], "", show_title="false"),
         ]),
         blank_zone(6),
         sheet_zone(f"By_{card_key}"),
     ])
 
 
-CW = 1160 - 24
+CW = 1176 - 24
 overview = N("vert", None, show=OV, kids=[
     N("horz", 330, kids=spaced([kpi_card(k, title, d) for k, title, d, *_ in METRICS], 14)),
-    text_zone(34, [t("Each card shows the share of that year's hires and the change from the year before. "
-                     "The bars compare each month with the same month a year earlier. Click a card to show it in the charts below.", 8, MUTED)]),
+    text_zone(34, [t("Each card shows the share of the year's hires and the change from the year before; "
+                     "bars compare each month with the same month a year earlier. Click a card to chart it below.", 8, MUTED)]),
     N("horz", None, kids=spaced([breakdown_card("Role", "role"), breakdown_card("Background", "background"),
                                  breakdown_card("Performance", "performance")], 14)),
-    text_zone(30, [t('"Not recorded" groups people whose department, job role, education or marital status is blank in the source data. '
-                     "Hiring years 2018 to 2022 are offered because each has a full year before it. Data: Real World Fake Data (#RWFD).", 7, MUTED)]),
+    text_zone(30, [t('"Not recorded": department, job role, education or marital status is blank in the data. '
+                     "Years 2018–2022 each have a full year before them. Data: Real World Fake Data (#RWFD).", 7, MUTED)]),
 ])
 home.float(overview, 24, 160, CW, 916)
 home.float(N("vert", None, show=TB, kids=[card([

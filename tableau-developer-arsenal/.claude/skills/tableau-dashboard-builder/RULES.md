@@ -49,8 +49,13 @@ A lookup by name or id failed while loading. Seen twice:
   *dashboard's* simple-id. Both need the BasicButtonObject / DashboardExportButton entries
   in the manifest (the builder adds them).
 - Pictures and button images live in the .twbx under `Image/` (`Workbook.image`).
-- Words that depend on a value (▲/▼, "up"/"down", "pts") go in a custom number format on a
-  numeric field (`*▲ 0.0%`, `*▼ 0.0%;▼ 0.0%`), not in a string calc, so Marks cards stay numeric.
+- Arrows that depend on a value go in a custom number format on a numeric field (`*▲ 0.0%`,
+  `*▼ 0.0%;▼ 0.0%`, confirmed), not in a string calc, so Marks cards stay numeric. Keep letters
+  out of number formats and put words in the label as static text.
+- A year shown on a Marks card is a date with `*yyyy` (the original's `*mmmm yyyy` style).
+  The number format `*0` displayed `#######`.
+- A bar's label sits in free space only if the axis runs past the bar: for a track of 1.0,
+  fix the axis at about 0–1.6 and the label lands to its right.
 
 ## House style used so far
 
