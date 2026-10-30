@@ -191,27 +191,44 @@ for key, title, *_ in METRICS:
                  style="<style-rule element='axis'>" + fixed_axis(val, -0.16, 1.02, "rows") + fixed_axis(area, -0.16, 1.02, "rows", sync=True)
                        + f"<format attr='display' class='0' field='{month.ref}' scope='cols' value='false' /></style-rule>")
 
-for card in ("Role", "Background", "Performance"):
+# Parameters are not put on the Tooltip shelf (no working sheet does that); the tooltip names
+# the measure and year through calcs instead.
+measure_name = emp.calc("Measure name", "string", measure.ref)
+year_name = emp.calc("Year name", "string", year.ref)
+
+
+def breakdown_sheet(name, card, *, tooltip_params=False, sort=True, fixed_size=False, styles=True, filters=True, minimal=False):
+    """The breakdown chart. The keyword switches exist so a split test can drop one feature at a time."""
     g = GROUPS[card]
     row, order = F(emp, g["label"]), F(emp, g["sort"])
     trk, cy, py, cnt, pyl = F(emp, track), F(emp, cy_sel), F(emp, py_sel), F(emp, cy_count), F(emp, py_label)
-    tip = runs([(row, {"fontcolor": MUTED, "fontsize": 9}), "\n", (measure, {"fontcolor": INK, "fontsize": 10}), (" in ", {"fontcolor": INK, "fontsize": 10}),
-                (year, {"fontcolor": INK, "fontsize": 10}), (": ", {"fontcolor": INK, "fontsize": 10}), (cy, {"fontcolor": INK, "fontsize": 10, "bold": "true"}), "\n",
+    mname, yname = (measure, year) if tooltip_params else (F(emp, measure_name), F(emp, year_name))
+    tip = runs([(row, {"fontcolor": MUTED, "fontsize": 9}), "\n", (mname, {"fontcolor": INK, "fontsize": 10}), (" in ", {"fontcolor": INK, "fontsize": 10}),
+                (yname, {"fontcolor": INK, "fontsize": 10}), (": ", {"fontcolor": INK, "fontsize": 10}), (cy, {"fontcolor": INK, "fontsize": 10, "bold": "true"}), "\n",
                 (cnt, {"fontcolor": MUTED, "fontsize": 9}), (" hires in this group", {"fontcolor": MUTED, "fontsize": 9}), "\n",
                 ("Year before: ", {"fontcolor": MUTED, "fontsize": 9}), (py, {"fontcolor": MUTED, "fontsize": 9})])
-    common = [("tooltip", cnt), ("tooltip", py), ("tooltip", measure), ("tooltip", year)]
-    wb.worksheet(f"By_{card}", emp, rows=[row], cols=[trk, cy], dual_cols=True, sorts=[(row, order)],
-                 filters=[(F(emp, in_window), "true"), (F(emp, g["hired"]), "true")],
+    common = [("tooltip", cnt), ("tooltip", py), ("tooltip", mname), ("tooltip", yname)]
+    keep = [(F(emp, in_window), "true"), (F(emp, g["hired"]), "true")] if filters else []
+    if minimal:
+        wb.worksheet(name, emp, rows=[row], cols=[cy], filters=keep, panes=[pane("Bar", mark_fmt={"mark-color": GOLD})])
+        return
+    style = "<style-rule element='axis'>" + fixed_axis(trk, 0, 1.0, "cols") + fixed_axis(cy, 0, 1.0, "cols", sync=True) + "</style-rule>"
+    if styles:
+        style += (f"<style-rule element='header'><format attr='width' field='{row.ref}' value='175' /></style-rule>"
+                  f"<style-rule element='label'><format attr='font-size' field='{row.ref}' value='9' />"
+                  f"<format attr='color' field='{row.ref}' value='{INK}' /></style-rule>")
+    wb.worksheet(name, emp, rows=[row], cols=[trk, cy], dual_cols=True, sorts=[(row, order)] if sort else [], filters=keep,
                  panes=[pane("Bar", enc=common, tooltip=tip),
-                        pane("Bar", enc=common, tooltip=tip, pane_id=1, axis=trk, fixed_size=True,
+                        pane("Bar", enc=common, tooltip=tip, pane_id=1, axis=trk, fixed_size=fixed_size,
                              mark_fmt={"mark-color": TRACK, "size": "1.6", "has-stroke": "false"}),
-                        pane("Bar", enc=common + [("text", cy), ("text", pyl)], tooltip=tip, pane_id=2, axis=cy, fixed_size=True,
+                        pane("Bar", enc=common + [("text", cy), ("text", pyl)], tooltip=tip, pane_id=2, axis=cy, fixed_size=fixed_size,
                              mark_fmt={"mark-color": GOLD, "size": "1.6", "has-stroke": "false", "mark-labels-show": "true", "mark-labels-cull": "false"},
                              label=runs([(cy, {"fontcolor": INK, "fontsize": 9, "bold": "true"}), ("  ", {}), (pyl, {"fontcolor": MUTED, "fontsize": 8})]))],
-                 style="<style-rule element='axis'>" + fixed_axis(trk, 0, 1.0, "cols") + fixed_axis(cy, 0, 1.0, "cols", sync=True) + "</style-rule>"
-                       + f"<style-rule element='header'><format attr='width' field='{row.ref}' value='175' /></style-rule>"
-                       + f"<style-rule element='label'><format attr='font-size' field='{row.ref}' value='9' />"
-                       + f"<format attr='color' field='{row.ref}' value='{INK}' /></style-rule>")
+                 style=style)
+
+
+for card in ("Role", "Background", "Performance"):
+    breakdown_sheet(f"By_{card}", card)
 
 vv, vo = F(vw, "[view]"), F(vw, "[view_order]", "min")
 vz, v1 = vw.zero_one()
