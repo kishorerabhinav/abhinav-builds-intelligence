@@ -39,6 +39,19 @@ A lookup by name or id failed while loading. Seen twice:
 | Points that share an x value merge (a dash shows as a dot) | Give each point its own id and put it on Path. |
 | A chart draws nothing, not even row headers, though the data matches its filter | Split-tested in Tableau on a bar chart with a dimension on Rows: numeric fields on the Marks card render (shares, counts, even when calculated with a parameter), but a field whose *text* comes from a parameter blanks the whole sheet: a calc that just returns a parameter (measure or year name), or a label like `STR(INT(year) - 1)`. Keep such fields off the Marks card; show numbers instead and put parameter text in dashboard text zones. |
 
+## Layout, buttons and pictures (from a working Tableau Public workbook)
+
+- Floating zones are siblings of the tiled layout inside `<zones>` (`Dashboard.float`), never
+  children of it. A plain tiled background plus floating cards and controls is how the
+  original HR dashboard is built.
+- Show/hide switches are `dashboard-object` zones with a `<toggle-action>` naming the
+  dashboard *window's* simple-id and the target zone id; export buttons name the
+  *dashboard's* simple-id. Both need the BasicButtonObject / DashboardExportButton entries
+  in the manifest (the builder adds them).
+- Pictures and button images live in the .twbx under `Image/` (`Workbook.image`).
+- Words that depend on a value (▲/▼, "up"/"down", "pts") go in a custom number format on a
+  numeric field (`*▲ 0.0%`, `*▼ 0.0%;▼ 0.0%`), not in a string calc, so Marks cards stay numeric.
+
 ## House style used so far
 
 - Fonts: Trebuchet MS for text, Georgia for large numbers and titles.

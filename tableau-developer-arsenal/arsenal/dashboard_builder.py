@@ -27,7 +27,8 @@ SANS = "Trebuchet MS"
 SERIF = "Georgia"
 
 # Features the workbook declares; Tableau validates the XML against them.
-MANIFEST = ["DatagraphCoreV1", "DatagraphNodeDashboardZoneVisibilityV1", "DatagraphNodeSingleValueFieldV1",
+MANIFEST = ["BasicButtonObject", "CollapsiblePane", "DashboardExportButton", "DashboardExportButtonCrosstab",
+            "DatagraphCoreV1", "DatagraphNodeDashboardZoneVisibilityV1", "DatagraphNodeSingleValueFieldV1",
             "ParameterAction", "SheetIdentifierTracking", "WindowsPersistSimpleIdentifiers", "ZoneVisibilityControl"]
 
 _REMOTE_TYPES = {"string": 129, "integer": 20, "real": 5, "date": 133, "boolean": 11}
@@ -252,12 +253,47 @@ def sheet_zone(name: str, size=None, **kw) -> dict:
     return N(size=size, name=name, show_title="false", **kw)
 
 
+def image_zone(path: str, size=None, **kw) -> dict:
+    """A picture packaged in the .twbx; add the file with Workbook.image()."""
+    return N(size=size, type_v2="bitmap", param=path, is_scaled="1", **kw)
+
+
+def toggle_button(target: dict, first_image: str, second_image: str, size=None, **kw) -> dict:
+    """Show/hide button for `target` (a node created with hidden_by_user='true' to start hidden).
+
+    The images and state order follow a working Tableau workbook: state 1 (second image) while
+    the target is hidden.
+    """
+    return N(size=size, type_v2="dashboard-object", button=("toggle", target, first_image, second_image), **kw)
+
+
+def export_button(kind: str, image: str, size=None, **kw) -> dict:
+    """Export the dashboard: kind 'pdf', 'powerpoint' or 'crosstab'."""
+    return N(size=size, type_v2="dashboard-object", button=("export", kind, image), **kw)
+
+
 class Dashboard:
     def __init__(self, wb: "Workbook", name: str, width: int, height: int, background: str = "#ffffff"):
         self.wb, self.name, self.width, self.height, self.background = wb, name, width, height, background
         self.id = _uid()
+        self.window_id = _uid()  # toggle buttons address the dashboard's window
         self.root: dict | None = None
+        self.floating: list[tuple[dict, tuple[float, float, float, float]]] = []
         self.zones_with_visibility: list[tuple[int, str]] = []
+
+    def float(self, node: dict, x: float, y: float, w: float, h: float) -> dict:
+        """Place a zone (or a container and its contents) at fixed pixels above the tiled layout.
+
+        Floating zones are written as siblings of the tiled layout inside <zones>, as Tableau does;
+        inside the tiled layout they get misplaced. Later floats draw on top of earlier ones.
+        """
+        self.floating.append((node, (x, y, w, h)))
+        return node
+
+    def _ids(self, node, ids):
+        node["zid"] = next(ids)
+        for k in node["kids"]:
+            self._ids(k, ids)
 
     def _place(self, node, x, y, w, h):
         node["rect"] = (x, y, w, h)
@@ -277,8 +313,8 @@ class Dashboard:
             if k in live:
                 pos += length
 
-    def _emit(self, node, parent_kind, ids) -> str:
-        zid = next(ids)
+    def _emit(self, node, parent_kind) -> str:
+        zid = node["zid"]
         x, y, w, h = node["rect"]
         a = dict(x=round(x * 100000 / self.width), y=round(y * 100000 / self.height),
                  w=round(w * 100000 / self.width), h=round(h * 100000 / self.height))
@@ -293,6 +329,19 @@ class Dashboard:
             if not visible:
                 a["hidden_by_user"] = "true"
         inner = a.pop("inner", "")
+        button = a.pop("button", None)
+        if button and button[0] == "toggle":
+            _, target, first, second = button
+            hidden = bool(target["attrs"].get("hidden_by_user"))
+            inner = (f"<button action='' active-visual-state-index='{1 if hidden else 0}'><toggle-action>"
+                     + escape(f'tabdoc:toggle-button-click-action window-id="{self.window_id}" zone-id="{zid}" zone-ids=[{target["zid"]}]')
+                     + f"</toggle-action><button-visual-state><image-path>{escape(first)}</image-path></button-visual-state>"
+                     f"<button-visual-state><image-path>{escape(second)}</image-path></button-visual-state></button>")
+        elif button:
+            _, kind, image = button
+            inner = (f"<button action='' button-click-action-metadata='{kind}'><export-button-action>"
+                     + escape(f'tabdoc:abstract-dashboard-button-export-wrapper dashboard-button-export-type="{kind}" dashboarddoc-id="{self.id}"')
+                     + f"</export-button-action><button-visual-state><image-path>{escape(image)}</image-path></button-visual-state></button>")
         if node["border"]:
             st = (f"<format attr='border-color' value='{node['border']}' /><format attr='border-style' value='solid' />"
                   f"<format attr='border-width' value='{node['bw']}' />")
@@ -302,7 +351,7 @@ class Dashboard:
         if node["bg"]:
             st += f"<format attr='background-color' value='{node['bg']}' />"
         attrs = "".join(f" {k.replace('_', '-')}={q(str(v))}" for k, v in sorted(a.items()))
-        kids = "".join(self._emit(k, node["kind"], ids) for k in node["kids"])
+        kids = "".join(self._emit(k, node["kind"]) for k in node["kids"])
         return f"<zone id={q(str(zid))}{attrs}>{inner}{kids}<zone-style>{st}</zone-style></zone>"
 
     def sheets(self) -> list[str]:
@@ -313,12 +362,22 @@ class Dashboard:
             for k in n["kids"]:
                 walk(k)
         walk(self.root)
+        for node, _ in self.floating:
+            walk(node)
         return out
 
     def xml(self) -> str:
         self.zones_with_visibility = []
+        ids = itertools.count(3)
+        self._ids(self.root, ids)
+        for node, _ in self.floating:
+            self._ids(node, ids)
         self._place(self.root, 0, 0, self.width, self.height)
-        zones = self._emit(self.root, None, itertools.count(3))
+        zones = self._emit(self.root, None)
+        floating = ""
+        for node, rect in self.floating:
+            self._place(node, *rect)
+            floating += self._emit(node, None)
         params = "".join(p.xml() for p in self.wb.params)
         # Parameter controls look their parameter up here; without it Tableau stops with
         # "invalid unordered_map<K, T> key".
@@ -328,7 +387,7 @@ class Dashboard:
                 f"<style-rule element='parameter-ctrl'><format attr='font-family' value='{self.wb.font}' /></style-rule></style>"
                 f"<size maxheight='{self.height}' maxwidth='{self.width}' minheight='{self.height}' minwidth='{self.width}' />{deps}"
                 f"<zones><zone h='100000' id='1' type-v2='layout-basic' w='100000' x='0' y='0'>{zones}"
-                f"<zone-style><format attr='background-color' value='{self.background}' /></zone-style></zone></zones>"
+                f"<zone-style><format attr='background-color' value='{self.background}' /></zone-style></zone>{floating}</zones>"
                 f"<simple-id uuid={q(self.id)} /></dashboard>")
 
 
@@ -342,6 +401,7 @@ class Workbook:
         self.datasources: list[DataSource] = []
         self.sheets: list[tuple[str, str]] = []
         self.dashboards: list[Dashboard] = []
+        self.images: dict[str, Path] = {}
         self._param_actions: list[tuple] = []
         self._deselects: list[tuple] = []
 
@@ -354,6 +414,11 @@ class Workbook:
         ds = DataSource(self, key, caption, filename, columns)
         self.datasources.append(ds)
         return ds
+
+    def image(self, path_in_workbook: str, source: str | Path) -> str:
+        """Package a picture (for image_zone or buttons); returns the path to use, e.g. 'Image/logo.png'."""
+        self.images[path_in_workbook] = Path(source)
+        return path_in_workbook
 
     def dashboard(self, name: str, width: int, height: int, background: str = "#ffffff") -> Dashboard:
         d = Dashboard(self, name, width, height, background)
@@ -495,7 +560,7 @@ class Workbook:
         windows = "".join(
             f"<window class='dashboard' maximized='true' name={q(d.name)}><viewpoints>"
             + "".join(f"<viewpoint name={q(s)}><zoom type='entire-view' /></viewpoint>" for s in d.sheets())
-            + f"</viewpoints><active id='-1' /><simple-id uuid={q(_uid())} /></window>" for d in self.dashboards)
+            + f"</viewpoints><active id='-1' /><simple-id uuid={q(d.window_id)} /></window>" for d in self.dashboards)
         windows += "".join(
             f"<window class='worksheet'{' hidden=' + chr(39) + 'true' + chr(39) if n in on_dash else ''} name={q(n)}><cards>"
             "<edge name='left'><strip size='160'><card type='pages' /><card type='filters' /><card type='marks' /></strip></edge>"
@@ -522,4 +587,6 @@ class Workbook:
             zf.writestr(twb_name or dest.with_suffix(".twb").name, self.to_xml())
             for ds in self.datasources:
                 zf.write(Path(data_dir) / ds.filename, f"{self.data_folder}/{ds.filename}")
+            for inside, source in self.images.items():
+                zf.write(source, inside)
         return dest

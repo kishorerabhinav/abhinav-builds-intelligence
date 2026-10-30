@@ -43,34 +43,19 @@ def write(name, header, data):
         w.writerow(header)
         w.writerows(data)
 
-# ---- Monthly trend: the line, its area, a dashed new-year rule, a 50% guide, end dot and year labels ----
+# ---- Monthly bars: each month of the chosen year beside the same month a year earlier ----
 by_month = defaultdict(list)
 for r in rows:
     by_month[r['hire_date'][:7]].append(r)
+MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 out = []
 for y in YEARS:
-    months = [f'{yy}-{m:02d}' for yy in (y - 1, y) for m in range(1, 13)]
-    d = lambda mo: f'{mo}-01'
     for metric, t in TESTS.items():
-        pts = [(mo, sum(map(t, by_month[mo])) / len(by_month[mo]), len(by_month[mo])) for mo in months if by_month[mo]]
-        for mo, s, n in pts:
-            out.append([str(y), metric, 'Share', 's', d(mo), round(s, 6), round(s, 6), '', n])
-        for k in range(7):  # dashes of the new-year rule
-            lo = k * 0.15
-            out.append([str(y), metric, 'Boundary', f'b{k}', d(f'{y}-01'), round(lo, 3), '', '', ''])
-            out.append([str(y), metric, 'Boundary', f'b{k}', d(f'{y}-01'), round(lo + 0.08, 3), '', '', ''])
-        out.append([str(y), metric, 'Guide', 'g', d(months[0]), 0.5, '', '', ''])
-        out.append([str(y), metric, 'Guide', 'g', d(months[-1]), 0.5, '', '50%', ''])
-        mo, s, n = pts[-1]
-        out.append([str(y), metric, 'End', 'e', d(mo), round(s, 6), '', '', n])
-        out.append([str(y), metric, 'Label', 'l1', d(months[0]), -0.12, '', str(y - 1), ''])
-        out.append([str(y), metric, 'Label', 'l2', d(f'{y}-01'), -0.12, '', str(y), ''])
-seen = defaultdict(int)  # point number within each line, so points that share a month stay separate marks
-for r in out:
-    k = tuple(r[:4])
-    r.append(f'p{seen[k]:02d}')
-    seen[k] += 1
-write('trend.csv', ['sel_year', 'metric', 'layer', 'seg', 'month', 'value', 'area', 'label', 'hires', 'pt'], out)
+        for m, name in enumerate(MONTHS, 1):
+            cur, prev = by_month[f'{y}-{m:02d}'], by_month[f'{y - 1}-{m:02d}']
+            share = lambda rs: round(sum(map(t, rs)) / len(rs), 6) if rs else ''
+            out.append([str(y), metric, m, name, share(cur), share(prev), len(cur), len(prev)])
+write('trend.csv', ['sel_year', 'metric', 'month_num', 'month', 'this_year', 'year_before', 'hires', 'hires_year_before'], out)
 
 # ---- Employee table in long form so headers can be clicked to sort ----
 COLS = [('Employee ID', 'employee_id'), ('Hire date', 'hire_date'), ('Gender', 'gender'), ('Race', 'race'),
@@ -84,5 +69,5 @@ for i, (label, col) in enumerate(COLS, 1):
         out.append([r['employee_id'], year_of(r), label, i, r[col], rank[r[col]]])
 write('employee_table.csv', ['employee_id', 'hire_year', 'column_name', 'col_order', 'value', 'value_rank'], out)
 
-write('views.csv', ['view', 'view_order'], [['Overview', 1], ['Employee list', 2]])
+write('views.csv', ['view', 'view_order', 'view_label'], [['Overview', 1, 'Show Overview'], ['Employee list', 2, 'Show Table']])
 print('ok')
