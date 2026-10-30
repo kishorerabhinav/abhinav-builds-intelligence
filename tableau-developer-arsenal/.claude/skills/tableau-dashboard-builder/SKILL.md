@@ -53,10 +53,16 @@ Checked in Tableau with the HR example:
 - Dynamic zone visibility on containers and blank zones (views, selected-card
   strips).
 
-Not yet confirmed: Gantt-bar layers filtered by a parameter comparison (the
-breakdown charts drew nothing). `examples/hr_diversity` keeps them until the
-split test decides between "Gantt" and "parameter filter"; prefer plain bars
-or dual-axis bars until then.
+Avoid: Gantt-bar layers read from a helper CSV and filtered by a
+parameter comparison. Tableau accepted the sheet (a re-saved copy kept every
+field, filter and sort, and the data matched the filter) but drew nothing,
+not even row headers. Build breakdowns from the main data source instead,
+with parameter-driven calcs as the KPI cards do and a dual-axis grey track
+plus coloured bar (`examples/hr_diversity`, `By_*`). That version is waiting
+for confirmation in Tableau.
+
+When the person sends back a .twbx Tableau has re-saved, read it: it shows
+how Tableau parsed every data source, field and sheet.
 
 ## Hand-over message
 

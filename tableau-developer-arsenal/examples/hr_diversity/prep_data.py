@@ -43,37 +43,6 @@ def write(name, header, data):
         w.writerow(header)
         w.writerows(data)
 
-# ---- Breakdown bars: one row per drawn layer (track, this year, year-before tick, value label) ----
-out = []
-for y in YEARS:
-    for card, key, fn in DIMS:
-        cur, prev = defaultdict(list), defaultdict(list)
-        for r in by_year[y]:
-            cur[fn(r)].append(r)
-        for r in by_year[y - 1]:
-            prev[fn(r)].append(r)
-        for metric, t in TESTS.items():
-            stats = []
-            for cat, rs in cur.items():
-                n = sum(map(t, rs))
-                ps = sum(map(t, prev[cat])) / len(prev[cat]) if prev.get(cat) else None
-                stats.append((cat, n / len(rs), ps, n, len(rs)))
-            ordl = ORDERS.get(key)
-            if ordl:
-                stats.sort(key=lambda s: ordl.index(s[0]) if s[0] in ordl else 98)
-            else:
-                stats.sort(key=lambda s: (s[0] == 'Not recorded', -s[1]))
-            for order, (cat, share, ps, n, hc) in enumerate(stats, 1):
-                base = [str(y), card, key, metric, cat, f'{cat} ({hc})', order, round(share, 6),
-                        '' if ps is None else round(ps, 6), n, hc]
-                out.append(base + ['1 Track', 0, 1, ''])
-                out.append(base + ['2 This year', 0, round(share, 6), ''])
-                if ps is not None:
-                    out.append(base + ['3 Year before', round(ps - 0.004, 6), 0.008, ''])
-                out.append(base + ['4 Value', 1.0, 0.0001, pct(share)])
-write('breakdown.csv', ['sel_year', 'card', 'group_by', 'metric', 'category', 'row_label', 'row_order', 'share', 'prev_share',
-                        'n_in_group', 'headcount', 'layer', 'bar_start', 'bar_length', 'value_text'], out)
-
 # ---- Monthly trend: the line, its area, a dashed new-year rule, a 50% guide, end dot and year labels ----
 by_month = defaultdict(list)
 for r in rows:

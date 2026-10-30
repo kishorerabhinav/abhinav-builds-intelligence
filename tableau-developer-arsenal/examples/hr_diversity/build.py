@@ -39,10 +39,6 @@ emp = wb.datasource("0hrclaudeemp001", "HR Employees", "hr_employees.csv", [
     ("diverse", "string"), ("position", "string"), ("department", "string"), ("job_role", "string"),
     ("performance", "string"), ("satisfaction", "integer"), ("education", "string"), ("education_field", "string"),
     ("marital_status", "string")])
-brk = wb.datasource("0hrclaudebrk001", "Breakdown layers", "breakdown.csv", [
-    ("sel_year", "string"), ("card", "string"), ("group_by", "string"), ("metric", "string"), ("category", "string"),
-    ("row_label", "string"), ("row_order", "integer"), ("share", "real"), ("prev_share", "real"), ("n_in_group", "integer"),
-    ("headcount", "integer"), ("layer", "string"), ("bar_start", "real"), ("bar_length", "real"), ("value_text", "string")])
 trd = wb.datasource("0hrclaudetrd001", "Monthly trend layers", "trend.csv", [
     ("sel_year", "string"), ("metric", "string"), ("layer", "string"), ("seg", "string"), ("month", "date"),
     ("value", "real"), ("area", "real"), ("label", "string"), ("hires", "integer"), ("pt", "string")])
@@ -85,10 +81,53 @@ direction = emp.calc("Diversity direction text", "string",
 show_overview = emp.calc("Show overview", "boolean", f"{view.ref} = 'Overview'")
 show_table = emp.calc("Show employee list", "boolean", f"{view.ref} = 'Employee list'")
 
-rows_to_draw = {card: brk.calc(f"{card} rows to draw", "boolean",
-                               f"[sel_year] = {year.ref} AND [metric] = {measure.ref} AND [card] = '{card}' AND [group_by] = {p.ref}")
-                for card, p in [("Role", role_by), ("Background", bg_by), ("Performance", perf_by)]}
-brk.palette("[layer]", {"1 Track": TRACK, "2 This year": GOLD, "3 Year before": TICK, "4 Value": CARD})
+# Breakdowns read the employee rows, like the KPI cards: shares for the chosen measure and
+# year, grouped by whichever field the card's "Group by" picker names.
+def by_measure(part):
+    return f"CASE {measure.ref}\n" + "\n".join(f"WHEN '{t}' THEN {EM[k][part]}" for k, t, *_ in METRICS) + "\nEND"
+
+
+in_window = emp.calc("In comparison window", "boolean", f"NOT ISNULL({period})")
+cy_sel = emp.calc("CY selected %", "real", by_measure("cy"), fmt="p0.0%")
+py_sel = emp.calc("PY selected %", "real", by_measure("py"), fmt="p0.0%")
+picked = f"CASE {measure.ref}\n" + "\n".join(f"WHEN '{t}' THEN {c}" for _, t, _, c, _ in METRICS) + "\nEND"
+cy_count = emp.calc("CY selected count", "integer", f"SUM(IF {period} = 'Current' AND ({picked}) THEN 1 ELSE 0 END)", fmt="n#,##0")
+track = emp.calc("Track", "real", "MIN(1.0)")
+py_label = emp.calc("Year before label", "string",
+                    f"IIF(ISNULL({py_sel}), '', STR(ROUND({py_sel} * 100, 1)) + '% in ' + STR({YEAR_N} - 1))", role="measure")
+satisfaction = emp.calc("Satisfaction label", "string",
+                        "CASE [satisfaction]\nWHEN 1 THEN 'Very unsatisfied'\nWHEN 2 THEN 'Unsatisfied'\nWHEN 3 THEN 'Neutral'\n"
+                        "WHEN 4 THEN 'Satisfied'\nELSE 'Very satisfied'\nEND")
+ORDERS = {
+    "Position": ["Vice President", "Director", "Manager", "Senior Professional", "Mid-level Professional", "Entry Level Professional"],
+    "Education": ["Doctoral Degree", "Master's Degree", "Bachelor's Degree", "Associates Degree", "High School"],
+    "Performance rating": ["Exceeds", "Fully Meets", "Needs Improvement", "PIP"],
+    "Employee satisfaction": ["Very satisfied", "Satisfied", "Neutral", "Unsatisfied", "Very unsatisfied"],
+}
+GROUPINGS = {  # card: (picker, [(picker value, field)])
+    "Role": (role_by, [("Position", "[position]"), ("Department", "[department]"), ("Job role", "[job_role]")]),
+    "Background": (bg_by, [("Education", "[education]"), ("Education field", "[education_field]"), ("Race", "[race]"),
+                           ("Marital status", "[marital_status]")]),
+    "Performance": (perf_by, [("Performance rating", "[performance]"), ("Employee satisfaction", satisfaction)]),
+}
+GROUPS = {}
+for card, (picker, options) in GROUPINGS.items():
+    group = emp.calc(f"{card} group", "string", f"CASE {picker.ref}\n" + "\n".join(f"WHEN '{v}' THEN {f}" for v, f in options) + "\nEND")
+    hires = emp.calc(f"{card} group hires", "integer", f"{{FIXED {group} : SUM(IIF(YEAR([hire_date]) = {YEAR_N}, 1, 0))}}")
+    label = emp.calc(f"{card} group label", "string", f"{group} + ' (' + STR({hires}) + ')'")
+    hired = emp.calc(f"{card} group hired this year", "boolean", f"{hires} > 0")
+    lit = lambda v: f'"{v}"' if "'" in v else f"'{v}'"  # Master's Degree goes in double quotes
+    ranked = [(v, f) for v, f in options if v in ORDERS]
+    listed = "".join(f"\nWHEN '{v}' THEN CASE {f}" + "".join(f" WHEN {lit(x)} THEN {i}" for i, x in enumerate(ORDERS[v], 1)) + " ELSE 90 END"
+                     for v, f in ranked)
+    is_ranked = " OR ".join(f"{picker.ref} = '{v}'" for v, _ in ranked) or "FALSE"
+    # Ranked fields keep their listed order (Vice President first); others go largest share first.
+    # "Not recorded" always sorts last.
+    sort_key = emp.calc(f"{card} sort", "real",
+                        f"MIN(IIF({group} = 'Not recorded', 1000, 0))\n"
+                        f"+ MIN(CASE {picker.ref}{listed}\nELSE 0 END)\n"
+                        f"+ IIF({is_ranked}, 0, -{cy_sel})")
+    GROUPS[card] = dict(label=label, hired=hired, sort=sort_key)
 
 trend_year = trd.calc("Selected year rows", "boolean", f"[sel_year] = {year.ref}")
 trd.palette("[layer]", {"Share": GOLD, "End": GOLD, "Boundary": RULE, "Guide": GUIDE, "Label": CARD})
@@ -104,7 +143,6 @@ t_sortval = tbl.calc("Row sort value", "integer", f"IIF([column_name] = {sortcol
 t_people = tbl.calc("People shown", "integer", "COUNTD([employee_id])", fmt="n#,##0")
 
 v_on = vw.calc("Is current view", "string", f"IIF([view] = {view.ref}, 'on', 'off')")
-v_line = vw.calc("Current view underline", "string", f"IIF([view] = {view.ref}, '━━━━━━━━', ' ')")
 vw.palette(v_on, {"on": INK, "off": MUTED})
 
 # -- worksheets ------------------------------------------------------------
@@ -154,32 +192,33 @@ for key, title, *_ in METRICS:
                        + f"<format attr='display' class='0' field='{month.ref}' scope='cols' value='false' /></style-rule>")
 
 for card in ("Role", "Background", "Performance"):
-    row, order = F(brk, "[row_label]"), F(brk, "[row_order]", "min")
-    start, length, layer, vlab = F(brk, "[bar_start]", "sum"), F(brk, "[bar_length]", "sum"), F(brk, "[layer]"), F(brk, "[value_text]")
-    share, prev, cnt, hc, cat = (F(brk, "[share]", "min"), F(brk, "[prev_share]", "min"), F(brk, "[n_in_group]", "min"),
-                                 F(brk, "[headcount]", "min"), F(brk, "[category]"))
-    tip = runs([(cat, {"fontcolor": MUTED, "fontsize": 9}), "\n", (measure, {"fontcolor": INK, "fontsize": 10}), (" in ", {"fontcolor": INK, "fontsize": 10}),
-                (year, {"fontcolor": INK, "fontsize": 10}), (": ", {"fontcolor": INK, "fontsize": 10}), (share, {"fontcolor": INK, "fontsize": 10, "bold": "true"}), "\n",
-                (cnt, {"fontcolor": MUTED, "fontsize": 9}), (" of ", {"fontcolor": MUTED, "fontsize": 9}), (hc, {"fontcolor": MUTED, "fontsize": 9}),
-                (" hires", {"fontcolor": MUTED, "fontsize": 9}), "\n", ("Year before: ", {"fontcolor": MUTED, "fontsize": 9}), (prev, {"fontcolor": MUTED, "fontsize": 9})])
-    wb.worksheet(f"By_{card}", brk, rows=[row], cols=[start], filters=[(F(brk, rows_to_draw[card]), "true")], sorts=[(row, order)],
-                 panes=[pane("GanttBar", fixed_size=True, tooltip=tip,
-                             enc=[("color", layer), ("size", length), ("text", vlab), ("tooltip", share), ("tooltip", prev),
-                                  ("tooltip", cnt), ("tooltip", hc), ("tooltip", cat), ("tooltip", measure), ("tooltip", year)],
-                             mark_fmt={"size": "1.4", "has-stroke": "false", "mark-labels-show": "true", "mark-labels-cull": "false"},
-                             extra_style=f"<style-rule element='datalabel'><format attr='color-mode' value='user' />"
-                                         f"<format attr='color' value='{INK}' /><format attr='font-size' value='9' /></style-rule>")],
-                 style="<style-rule element='axis'>" + fixed_axis(start, 0, 1.16, "cols") + "</style-rule>"
-                       + f"<style-rule element='header'><format attr='width' field='{row.ref}' value='170' /></style-rule>"
+    g = GROUPS[card]
+    row, order = F(emp, g["label"]), F(emp, g["sort"])
+    trk, cy, py, cnt, pyl = F(emp, track), F(emp, cy_sel), F(emp, py_sel), F(emp, cy_count), F(emp, py_label)
+    tip = runs([(row, {"fontcolor": MUTED, "fontsize": 9}), "\n", (measure, {"fontcolor": INK, "fontsize": 10}), (" in ", {"fontcolor": INK, "fontsize": 10}),
+                (year, {"fontcolor": INK, "fontsize": 10}), (": ", {"fontcolor": INK, "fontsize": 10}), (cy, {"fontcolor": INK, "fontsize": 10, "bold": "true"}), "\n",
+                (cnt, {"fontcolor": MUTED, "fontsize": 9}), (" hires in this group", {"fontcolor": MUTED, "fontsize": 9}), "\n",
+                ("Year before: ", {"fontcolor": MUTED, "fontsize": 9}), (py, {"fontcolor": MUTED, "fontsize": 9})])
+    common = [("tooltip", cnt), ("tooltip", py), ("tooltip", measure), ("tooltip", year)]
+    wb.worksheet(f"By_{card}", emp, rows=[row], cols=[trk, cy], dual_cols=True, sorts=[(row, order)],
+                 filters=[(F(emp, in_window), "true"), (F(emp, g["hired"]), "true")],
+                 panes=[pane("Bar", enc=common, tooltip=tip),
+                        pane("Bar", enc=common, tooltip=tip, pane_id=1, axis=trk, fixed_size=True,
+                             mark_fmt={"mark-color": TRACK, "size": "1.6", "has-stroke": "false"}),
+                        pane("Bar", enc=common + [("text", cy), ("text", pyl)], tooltip=tip, pane_id=2, axis=cy, fixed_size=True,
+                             mark_fmt={"mark-color": GOLD, "size": "1.6", "has-stroke": "false", "mark-labels-show": "true", "mark-labels-cull": "false"},
+                             label=runs([(cy, {"fontcolor": INK, "fontsize": 9, "bold": "true"}), ("  ", {}), (pyl, {"fontcolor": MUTED, "fontsize": 8})]))],
+                 style="<style-rule element='axis'>" + fixed_axis(trk, 0, 1.0, "cols") + fixed_axis(cy, 0, 1.0, "cols", sync=True) + "</style-rule>"
+                       + f"<style-rule element='header'><format attr='width' field='{row.ref}' value='175' /></style-rule>"
                        + f"<style-rule element='label'><format attr='font-size' field='{row.ref}' value='9' />"
                        + f"<format attr='color' field='{row.ref}' value='{INK}' /></style-rule>")
 
 vv, vo = F(vw, "[view]"), F(vw, "[view_order]", "min")
 vz, v1 = vw.zero_one()
 wb.worksheet("View_Toggle", vw, cols=[vv], sorts=[(vv, vo)], tooltip_none=True,
-             panes=[pane("Text", enc=[("text", vv), ("text", F(vw, v_line)), ("color", F(vw, v_on)), ("lod", F(vw, vz)), ("lod", F(vw, v1))],
+             panes=[pane("Text", enc=[("text", vv), ("color", F(vw, v_on)), ("lod", F(vw, vz)), ("lod", F(vw, v1))],
                          mark_fmt={"mark-labels-show": "true"},
-                         label=runs([(vv, {"fontsize": 10, "bold": "true"}), "\n", (F(vw, v_line), {"fontsize": 6, "fontcolor": GOLD})]),
+                         label=runs([(vv, {"fontsize": 10, "bold": "true"})]),
                          cell="<style-rule element='cell'><format attr='text-align' value='center' /><format attr='vertical-align' value='center' /></style-rule>")],
              style=f"<style-rule element='header'><format attr='height-header' value='1' /></style-rule>"
                    f"<style-rule element='label'><format attr='color' field='{vv.ref}' value='#00000000' /><format attr='font-size' field='{vv.ref}' value='1' /></style-rule>")
@@ -223,11 +262,11 @@ def kpi_card(key, title, definition):
 
 def breakdown_card(card, heading, param):
     return N("vert", None, bg=CARD, border=BORDER, pad=12, kids=[
-        N("horz", 50, kids=[
-            text_zone(None, [(measure, {"fontcolor": INK, "fontsize": 12, "bold": "true"}), (f" by {heading}", {"fontcolor": INK, "fontsize": 12, "bold": "true"}), "\n",
-                             ("Share of ", {"fontcolor": MUTED, "fontsize": 9}), (year, {"fontcolor": MUTED, "fontsize": 9}),
-                             (" hires in each group. Grey ticks mark the year before.", {"fontcolor": MUTED, "fontsize": 9})]),
-            param_zone(160, param, "Group by"),
+        text_zone(26, [(measure, {"fontcolor": INK, "fontsize": 12, "bold": "true"}), (f" by {heading}", {"fontcolor": INK, "fontsize": 12, "bold": "true"})]),
+        N("horz", 46, kids=[
+            text_zone(None, [("Share of ", {"fontcolor": MUTED, "fontsize": 9}), (year, {"fontcolor": MUTED, "fontsize": 9}),
+                             (" hires in each group, with the year before in grey.", {"fontcolor": MUTED, "fontsize": 9})]),
+            param_zone(150, param, "Group by"),
         ]),
         sheet_zone(f"By_{card}"),
     ])

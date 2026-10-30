@@ -37,6 +37,7 @@ A lookup by name or id failed while loading. Seen twice:
 | Default colours instead of yours | A colour palette needs the field declared as a `<column-instance>` on the data source, beside the palette in the data source `<style>`. |
 | `<Parameters.X>` blank in a label or tooltip | The parameter must also be on the Marks card (an encoding). |
 | Points that share an x value merge (a dash shows as a dot) | Give each point its own id and put it on Path. |
+| A chart draws nothing, not even row headers, though the data matches its filter | Seen with Gantt layers from a helper CSV filtered by parameter comparisons. Rebuild from the main data source with parameter calcs and a dual-axis bar. |
 
 ## House style used so far
 
