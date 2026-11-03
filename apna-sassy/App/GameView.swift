@@ -146,7 +146,7 @@ struct GameView: View {
     private func resultCard(_ r: LevelResult) -> some View {
         let isLast = model.levelIndex + 1 >= Levels.all.count
         return overlayCard {
-            Text(isLast ? "You made it home!" : "Level complete!").font(.largeTitle.weight(.black))
+            Text(isLast ? "Apna Sassy made it home!" : "Level complete!").font(.largeTitle.weight(.black))
             HStack(spacing: 6) {
                 ForEach(0..<3, id: \.self) { i in
                     Image(systemName: i < r.stars ? "star.fill" : "star")

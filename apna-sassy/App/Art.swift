@@ -45,7 +45,7 @@ struct Palette {
 }
 
 enum Art {
-    // MARK: - Sassy, the hero: a Saint Bernard in her blue harness (18x13, facing right)
+    // MARK: - Apna Sassy, the hero: a Saint Bernard in her blue harness (18x13, facing right)
 
     private static let sassyPalette: [Character: UIColor] = [
         "k": .init(hex: 0x2a1a10), "b": .init(hex: 0xc0702a), "B": .init(hex: 0x5a2c10),
@@ -118,7 +118,7 @@ enum Art {
             fill(c, 9, 4, 1, 44, .init(hex: 0xb6ad94))
             fill(c, 5, 44, 6, 4, .init(hex: 0x6b5b45))
             fill(c, 6, 0, 4, 4, .init(hex: 0xffd447))
-            // A big leaf banner: Sassy's home.
+            // A big leaf banner: Apna Sassy's home.
             let leaf = UIColor(hex: 0x3fbf55), vein = UIColor(hex: 0x23843a)
             for row in 0..<12 {
                 let w = row < 6 ? row + 2 : 13 - row

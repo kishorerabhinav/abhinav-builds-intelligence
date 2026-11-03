@@ -246,7 +246,7 @@ final class GameScene: SKScene {
         let halfW = size.width / 2, halfH = size.height / 2
         let levelW = CGFloat(level.width) * tile, levelH = CGFloat(level.height) * tile
         let p = point(world.player.position)
-        // Look a little ahead in the direction Sassy faces.
+        // Look a little ahead in the direction Apna Sassy faces.
         var target = CGPoint(x: p.x + CGFloat(world.player.facing) * tile * 1.5, y: p.y + tile * 1.5)
         target.x = min(max(target.x, halfW), max(halfW, levelW - halfW))
         target.y = min(max(target.y, halfH), max(halfH, levelH - halfH))
