@@ -26,6 +26,7 @@ This portfolio showcases practical projects that combine technical skills with r
 | AI Analytics Copilot | Python, SQL, LLMs | Explore natural-language interaction with business data |
 | Customer & Product Analytics | SQL, Tableau, Python | Analyze product adoption, engagement, and performance |
 | [Tableau Developer Arsenal](tableau-developer-arsenal/) | Python, Tableau REST API, Hyper API | Publish, inspect and monitor Tableau content from scripts |
+| [Detour](detour-extension/) | JavaScript, Chrome Extensions (MV3) | Send chosen sites through your own proxy server in Chrome |
 
 *Projects will be added as I build and document them.*
 
