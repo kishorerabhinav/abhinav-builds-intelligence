@@ -23,17 +23,17 @@ launch, so the app has no image files.
 
 | # | World | What's new |
 |---|---|---|
-| 1 | धूप वाला बधार (Sunny fields) | Running, jumping, crates, beetles, a spring |
-| 2 | गूँजत गुफा (Echoing cave) | Low ceilings, spike pits, spikers |
-| 3 | बादर के सीढ़ी (Cloud steps) | Floating islands, one-way platforms, springs |
-| 4 | साँझ के किला (Evening fort) | Everything at once |
+| 1 | गंगा किनारोॅ (the Ganga bank) | Running, jumping, crates, beetles, a spring |
+| 2 | खड़गपुर के गुफा (a cave in the Kharagpur hills) | Low ceilings, spike pits, spikers |
+| 3 | बादलोॅ के सीढ़ी (steps in the clouds) | Floating islands, one-way platforms, springs |
+| 4 | मुंगेर किला (Munger fort at dusk) | Everything at once |
 
 ## Language
 
-All on-screen text is in Hindi with a Bihari (Bhojpuri) flavour, written in Devanagari:
-"का बात बा! लेवल पार!" when you finish a level, "तनी सुस्ता लीं" on the pause screen, and
-"अपना सैसी घरे पहुँच गइली!" at the end of the game. Every line lives in `App/Strings.swift`,
-so wording can be changed in one place.
+All on-screen text is in Angika as spoken around Munger, Bihar, written in Devanagari:
+"की बात छै! लेवल पार होय गेलै!" when you finish a level, "तनी दम धरोॅ" on the pause screen,
+and "अपना सैसी घोॅर पहुँची गेलै!" at the end of the game. Every line lives in
+`App/Strings.swift`, so wording can be changed in one place.
 
 ## Install on your iPhone
 
