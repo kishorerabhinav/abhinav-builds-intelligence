@@ -57,6 +57,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .actions { display: flex; gap: 8px; }
 button { font: 600 13px var(--sans); border-radius: 6px; padding: 7px 12px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--fg); }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); margin-left: auto; }
+.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.checks li { display: grid; grid-template-columns: 18px 1fr; gap: 4px; }
+.checks .ok { color: var(--accent); } .checks .bad { color: var(--warn); }
+.checks code { font-family: var(--mono); }
+#verdict { color: var(--fg); font-weight: 600; }
 .note { font-size: 12px; color: var(--muted); margin: 0; }
 .error { font-size: 12px; color: var(--warn); margin: 0; }
 </style>
@@ -105,6 +110,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
       <textarea id="sites" spellcheck="false" placeholder="example.com&#10;news.example.org"></textarea>
     </label>
     <button type="button" id="addCurrent">Add this tab's site</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Check connection</legend>
+    <button type="button" id="test">Test connection</button>
+    <ul class="checks" id="checks" hidden></ul>
+    <p class="note" id="verdict" hidden></p>
   </fieldset>
 
   <p class="error" id="error" hidden></p>

@@ -1,4 +1,4 @@
-import { loadSettings, parseSites, cleanHost } from "./shared.js";
+import { loadSettings, parseSites, cleanHost, TEST_PROXIED, TEST_DIRECT } from "./shared.js";
 
 const $ = id => document.getElementById(id);
 
@@ -110,5 +110,84 @@ $("addCurrent").addEventListener("click", async () => {
   $("sites").value = sites.join("\n");
   $("saved").textContent = `Added ${host}. Press Save.`;
 });
+
+// ---- Connection test -------------------------------------------------------
+
+async function getIp(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = (await res.text()).trim();
+    try { return { ip: JSON.parse(text).ip }; } catch (_) { return { ip: text.split(/\s/)[0] }; }
+  } catch (e) {
+    return { error: e.name === "AbortError" ? "no answer after 10 seconds" : e.message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function addCheck(ok, html) {
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="${ok ? "ok" : "bad"}">${ok ? "✓" : "✗"}</span><span></span>`;
+  li.lastChild.innerHTML = html;
+  $("checks").appendChild(li);
+}
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function runTest() {
+  $("test").disabled = true;
+  $("test").textContent = "Testing…";
+  $("checks").innerHTML = "";
+  $("checks").hidden = false;
+  $("verdict").hidden = true;
+  const s = await loadSettings();
+  let verdict = "";
+
+  // 1. Who controls Chrome's proxy setting?
+  const setting = await chrome.proxy.settings.get({ incognito: false });
+  const control = setting.levelOfControl;
+  const ours = control === "controlled_by_this_extension";
+  if (ours) addCheck(true, "Chrome is using this extension's proxy settings.");
+  else if (control === "controlled_by_other_extensions") {
+    addCheck(false, "Another extension (probably a VPN or proxy extension) controls Chrome's proxy. Turn it off in chrome://extensions.");
+    verdict = verdict || "Turn off the other VPN or proxy extension, then test again.";
+  } else if (control === "not_controllable") {
+    addCheck(false, "Your computer's administrator or a policy controls Chrome's proxy, so no extension can change it.");
+    verdict = verdict || "This Chrome is managed, so the extension can't take over the proxy.";
+  } else {
+    addCheck(false, s.enabled ? "The extension is on but its setting isn't applied. Press Save." : "The extension is off. Turn the switch on.");
+    verdict = verdict || (s.enabled ? "Press Save, then test again." : "Turn the switch on, then test again.");
+  }
+
+  // 2. Your normal IP, and 3. your IP through the proxy
+  const [direct, proxied] = await Promise.all([getIp(`https://${TEST_DIRECT}/ip`), getIp(`https://${TEST_PROXIED}/?format=json`)]);
+  if (direct.ip) addCheck(true, `Your normal IP: <code>${esc(direct.ip)}</code>`);
+  else addCheck(false, `Couldn't read your normal IP (${esc(direct.error)}).`);
+
+  if (!ours) {
+    addCheck(false, "Proxy not tested, because Chrome isn't using this extension's settings yet.");
+  } else if (proxied.ip && direct.ip && proxied.ip !== direct.ip) {
+    addCheck(true, `IP through the proxy: <code>${esc(proxied.ip)}</code>. The proxy works.`);
+    verdict = verdict || "The proxy works. If a site still won't open, check it's in the list (or use Every site), and that this proxy allows that site.";
+  } else if (proxied.ip && direct.ip && proxied.ip === direct.ip) {
+    addCheck(false, `IP through the proxy is the same as your normal IP (<code>${esc(proxied.ip)}</code>), so traffic isn't going through the proxy.`);
+    verdict = verdict || "Traffic isn't going through the proxy. Check the steps marked ✗ above.";
+  } else if (proxied.ip) {
+    addCheck(true, `IP through the proxy: <code>${esc(proxied.ip)}</code>.`);
+  } else {
+    const { lastError } = await chrome.storage.session.get("lastError");
+    const why = lastError ? `${lastError.message}` : proxied.error;
+    addCheck(false, `The proxy didn't respond (${esc(why)}).`);
+    verdict = verdict || "The proxy isn't working: check its type, address, port and login, or try another proxy. Many free proxies are offline or don't support HTTPS sites.";
+  }
+
+  $("verdict").textContent = verdict;
+  $("verdict").hidden = !verdict;
+  $("test").disabled = false;
+  $("test").textContent = "Test again";
+}
+$("test").addEventListener("click", runTest);
 
 init();

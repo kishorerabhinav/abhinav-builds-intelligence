@@ -1,5 +1,9 @@
 // Settings and proxy rules shared by the background worker and the popup.
 
+// The connection test asks one service for your IP through the proxy and another directly.
+export const TEST_PROXIED = "api.ipify.org";
+export const TEST_DIRECT = "ifconfig.me";
+
 export const DEFAULTS = {
   enabled: false,
   scheme: "http",        // http | https | socks5
@@ -47,7 +51,7 @@ export function pacProxy(s) {
 
 /** A PAC script that proxies the listed sites (and their subdomains) and sends everything else direct. */
 export function buildPac(s) {
-  const sites = JSON.stringify(s.sites || []);
+  const sites = JSON.stringify([...(s.sites || []), TEST_PROXIED]);
   const proxy = JSON.stringify(pacProxy(s));
   return `function FindProxyForURL(url, host) {
   host = host.toLowerCase();
@@ -68,7 +72,7 @@ export function proxyConfig(s) {
       mode: "fixed_servers",
       rules: {
         singleProxy: { scheme: s.scheme, host: s.host, port: Number(s.port) },
-        bypassList: s.bypass,
+        bypassList: [...s.bypass, TEST_DIRECT],
       },
     };
   }
