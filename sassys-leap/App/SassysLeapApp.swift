@@ -2,7 +2,7 @@ import GameCore
 import SwiftUI
 
 @main
-struct PipsLeapApp: App {
+struct SassysLeapApp: App {
     @State private var progress = ProgressStore()
     @State private var playing: Int?
 

@@ -18,7 +18,7 @@ final class GameScene: SKScene {
     private let worldNode = SKNode()
     private let backdrop = SKNode()
     private let cam = SKCameraNode()
-    private let pip = SKSpriteNode(texture: Art.pipIdle)
+    private let sassy = SKSpriteNode(texture: Art.sassyIdle)
     private var tileNodes: [Int: SKSpriteNode] = [:]
     private var gemNodes: [Int: SKSpriteNode] = [:]
     private var enemyNodes: [Int: SKSpriteNode] = [:]
@@ -151,10 +151,10 @@ final class GameScene: SKScene {
             enemyNodes[enemy.id] = node
         }
 
-        pip.size = CGSize(width: tile * 0.95, height: tile * 0.95)
-        pip.anchorPoint = CGPoint(x: 0.5, y: 0)
-        pip.zPosition = 5
-        worldNode.addChild(pip)
+        sassy.size = CGSize(width: tile * 0.95, height: tile * 0.95)
+        sassy.anchorPoint = CGPoint(x: 0.5, y: 0)
+        sassy.zPosition = 5
+        worldNode.addChild(sassy)
         sync()
     }
 
@@ -219,20 +219,20 @@ final class GameScene: SKScene {
 
     private func sync() {
         let p = world.player
-        pip.position = point(p.position)
-        pip.xScale = p.facing < 0 ? -1 : 1
+        sassy.position = point(p.position)
+        sassy.xScale = p.facing < 0 ? -1 : 1
         switch world.pose {
         case .run:
             runFrame += abs(p.velocity.x) / 60 * 1.6
-            pip.texture = Art.pipRun[Int(runFrame) % 2]
+            sassy.texture = Art.sassyRun[Int(runFrame) % 2]
         case .jump, .fall, .cheer, .hurt:
-            pip.texture = Art.pipJump
+            sassy.texture = Art.sassyJump
         case .idle, .dead:
-            pip.texture = Art.pipIdle
+            sassy.texture = Art.sassyIdle
         }
-        pip.alpha = p.isInvulnerable && !p.isDead && Int(world.time * 12) % 2 == 0 ? 0.35 : 1
-        pip.zRotation = p.isDead ? .pi : 0
-        pip.isHidden = false
+        sassy.alpha = p.isInvulnerable && !p.isDead && Int(world.time * 12) % 2 == 0 ? 0.35 : 1
+        sassy.zRotation = p.isDead ? .pi : 0
+        sassy.isHidden = false
 
         for enemy in world.enemies {
             guard let node = enemyNodes[enemy.id], enemy.alive else { continue }
@@ -246,7 +246,7 @@ final class GameScene: SKScene {
         let halfW = size.width / 2, halfH = size.height / 2
         let levelW = CGFloat(level.width) * tile, levelH = CGFloat(level.height) * tile
         let p = point(world.player.position)
-        // Look a little ahead in the direction Pip faces.
+        // Look a little ahead in the direction Sassy faces.
         var target = CGPoint(x: p.x + CGFloat(world.player.facing) * tile * 1.5, y: p.y + tile * 1.5)
         target.x = min(max(target.x, halfW), max(halfW, levelW - halfW))
         target.y = min(max(target.y, halfH), max(halfH, levelH - halfH))
@@ -294,9 +294,9 @@ final class GameScene: SKScene {
             checkpointNodes[i].texture = Art.checkpoint(active: true)
             burst(at: checkpointNodes[i].position, color: .init(hex: 0x5bdc6a))
         case .sprang:
-            pip.run(.sequence([.scaleY(to: 0.7, duration: 0.05), .scaleY(to: 1, duration: 0.12)]))
+            sassy.run(.sequence([.scaleY(to: 0.7, duration: 0.05), .scaleY(to: 1, duration: 0.12)]))
         case .landed:
-            pip.run(.sequence([.scaleY(to: 0.85, duration: 0.04), .scaleY(to: 1, duration: 0.08)]))
+            sassy.run(.sequence([.scaleY(to: 0.85, duration: 0.04), .scaleY(to: 1, duration: 0.08)]))
         case .hurt:
             shake()
         case .died:

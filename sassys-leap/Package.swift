@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "PipsLeap",
+    name: "SassysLeap",
     products: [.library(name: "GameCore", targets: ["GameCore"])],
     targets: [
         .target(name: "GameCore"),

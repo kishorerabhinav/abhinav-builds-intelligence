@@ -1,7 +1,7 @@
-# Pip's Leap
+# Sassy's Leap
 
 An original side-scrolling platformer for iPhone (iOS 17 and later, built for iOS 27). You play
-Pip, a little sprout trying to get home across four worlds. Run, jump, stomp critters, pop crates
+Sassy, a sprout with a flower, sunglasses and plenty of attitude, trying to get home across four worlds. Run, jump, stomp critters, pop crates
 for gems, and bounce off springs.
 
 All the characters, levels and pixel art are original. Every sprite and tile is drawn in code at
@@ -32,13 +32,13 @@ You need a Mac with Xcode.
 
 ```bash
 brew install xcodegen
-cd pips-leap
+cd sassys-leap
 xcodegen generate
-open PipsLeap.xcodeproj
+open SassysLeap.xcodeproj
 ```
 
 In Xcode, pick your team under **Signing & Capabilities** (a free Apple ID works), change the
-bundle ID from `com.example.PipsLeap` to something unique, plug in your iPhone, and press Run.
+bundle ID from `com.example.SassysLeap` to something unique, plug in your iPhone, and press Run.
 The first time, approve the developer on the phone in Settings › General › VPN & Device
 Management.
 
@@ -60,7 +60,7 @@ jumps feel fair on a touch screen.
 ## Tests
 
 ```bash
-cd pips-leap && swift test
+cd sassys-leap && swift test
 ```
 
 Besides unit tests for jumping, walls, crates, stomping, spikes, springs, platforms and

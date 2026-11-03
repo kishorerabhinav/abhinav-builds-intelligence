@@ -14,11 +14,11 @@ struct MenuView: View {
 
             HStack(spacing: 32) {
                 VStack(spacing: 14) {
-                    Image(uiImage: UIImage(cgImage: Art.pipIdle.cgImage()))
+                    Image(uiImage: UIImage(cgImage: Art.sassyIdle.cgImage()))
                         .interpolation(.none)
                         .resizable()
                         .frame(width: 96, height: 96)
-                    Text("Pip's Leap")
+                    Text("Sassy's Leap")
                         .font(.system(size: 44, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.35), radius: 0, x: 3, y: 3)

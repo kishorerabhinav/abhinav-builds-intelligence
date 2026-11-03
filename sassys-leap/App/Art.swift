@@ -45,34 +45,34 @@ struct Palette {
 }
 
 enum Art {
-    // MARK: - Pip, the hero (an original sprout character)
+    // MARK: - Sassy, the hero (an original sprout with a flower, shades and attitude)
 
-    private static let pipPalette: [Character: UIColor] = [
+    private static let sassyPalette: [Character: UIColor] = [
         "k": .init(hex: 0x1d2b22), "g": .init(hex: 0x62c95c), "l": .init(hex: 0xa6ec86),
-        "f": .init(hex: 0x2f9e44), "w": .white, "e": .init(hex: 0x111111),
+        "F": .init(hex: 0xff5fa2), "y": .init(hex: 0xffd447), "w": .white, "e": .init(hex: 0x15131c),
         "p": .init(hex: 0xff9fb0), "o": .init(hex: 0xf08c3a),
     ]
 
-    private static let pipBody = [
-        "......ff....",
-        ".....fllf...",
-        "......f.....",
+    private static let sassyBody = [
+        ".....FFF....",
+        "....FFyFF...",
+        ".....FFF....",
         "...kkkkkk...",
         "..kgllgggk..",
-        ".kggwegwegk.",
+        ".kgeweeweegk",
         ".kpggggggpk.",
-        ".kgggkkgggk.",
+        ".kgggggkkgk.",
         ".kggggggggk.",
         "..kggggggk..",
         "...kkkkkk...",
     ]
 
-    static let pipIdle = sprite(pipBody + ["...oo..oo..."], pipPalette)
-    static let pipRun = [
-        sprite(pipBody + ["..oo....oo.."], pipPalette),
-        sprite(pipBody + ["....oooo...."], pipPalette),
+    static let sassyIdle = sprite(sassyBody + ["...oo..oo..."], sassyPalette)
+    static let sassyRun = [
+        sprite(sassyBody + ["..oo....oo.."], sassyPalette),
+        sprite(sassyBody + ["....oooo...."], sassyPalette),
     ]
-    static let pipJump = sprite(Array(pipBody.dropLast()) + ["..kkkkkkkk..", "..o......o.."], pipPalette)
+    static let sassyJump = sprite(Array(sassyBody.dropLast()) + ["..kkkkkkkk..", "..o......o.."], sassyPalette)
 
     // MARK: - Enemies (face left by default)
 
@@ -118,7 +118,7 @@ enum Art {
             fill(c, 9, 4, 1, 44, .init(hex: 0xb6ad94))
             fill(c, 5, 44, 6, 4, .init(hex: 0x6b5b45))
             fill(c, 6, 0, 4, 4, .init(hex: 0xffd447))
-            // A big leaf banner: Pip's home.
+            // A big leaf banner: Sassy's home.
             let leaf = UIColor(hex: 0x3fbf55), vein = UIColor(hex: 0x23843a)
             for row in 0..<12 {
                 let w = row < 6 ? row + 2 : 13 - row
