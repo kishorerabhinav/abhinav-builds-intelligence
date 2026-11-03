@@ -24,7 +24,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.ApnaSassy
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: "Apna Sassy"
+        INFOPLIST_KEY_CFBundleDisplayName: "अपना सैसी"
+        DEVELOPMENT_LANGUAGE: hi
+        INFOPLIST_KEY_CFBundleDevelopmentRegion: hi
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.platform-games
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES

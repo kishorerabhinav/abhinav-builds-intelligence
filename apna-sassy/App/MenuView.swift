@@ -18,7 +18,7 @@ struct MenuView: View {
                         .interpolation(.none)
                         .resizable()
                         .frame(width: 126, height: 91)
-                    Text("Apna Sassy")
+                    Text(Say.title)
                         .font(.system(size: 44, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.35), radius: 0, x: 3, y: 3)
@@ -63,10 +63,10 @@ private struct LevelButton: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(level.name).font(.headline)
                     if let record {
-                        Text("Best \(String(format: "%.1f", record.bestTime))s · \(record.bestScore) pts")
+                        Text(Say.best(seconds: record.bestTime, score: record.bestScore))
                             .font(.caption).opacity(0.85)
                     } else {
-                        Text(unlocked ? "Not played yet" : "Finish the level before")
+                        Text(unlocked ? Say.notPlayed : Say.locked)
                             .font(.caption).opacity(0.85)
                     }
                 }

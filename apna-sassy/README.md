@@ -23,10 +23,17 @@ launch, so the app has no image files.
 
 | # | World | What's new |
 |---|---|---|
-| 1 | Sunny Meadow | Running, jumping, crates, beetles, a spring |
-| 2 | Echo Cavern | Low ceilings, spike pits, spikers |
-| 3 | Cloud Steps | Floating islands, one-way platforms, springs |
-| 4 | Twilight Keep | Everything at once |
+| 1 | धूप वाला बधार (Sunny fields) | Running, jumping, crates, beetles, a spring |
+| 2 | गूँजत गुफा (Echoing cave) | Low ceilings, spike pits, spikers |
+| 3 | बादर के सीढ़ी (Cloud steps) | Floating islands, one-way platforms, springs |
+| 4 | साँझ के किला (Evening fort) | Everything at once |
+
+## Language
+
+All on-screen text is in Hindi with a Bihari (Bhojpuri) flavour, written in Devanagari:
+"का बात बा! लेवल पार!" when you finish a level, "तनी सुस्ता लीं" on the pause screen, and
+"अपना सैसी घरे पहुँच गइली!" at the end of the game. Every line lives in `App/Strings.swift`,
+so wording can be changed in one place.
 
 ## Install on your iPhone
 

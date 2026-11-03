@@ -114,7 +114,7 @@ struct GameView: View {
             Spacer()
             pill {
                 Image(systemName: "timer")
-                Text("\(model.seconds)s")
+                Text(Say.seconds(model.seconds))
             }
             Text(Levels.all[model.levelIndex].name)
                 .font(.subheadline.weight(.semibold))
@@ -134,11 +134,11 @@ struct GameView: View {
 
     private var pauseMenu: some View {
         overlayCard {
-            Text("Paused").font(.largeTitle.weight(.black))
+            Text(Say.paused).font(.largeTitle.weight(.black))
             HStack(spacing: 12) {
-                cardButton("Resume", "play.fill") { model.setPaused(false) }
-                cardButton("Restart", "arrow.counterclockwise") { restart() }
-                cardButton("Levels", "square.grid.2x2.fill") { onExit(nil) }
+                cardButton(Say.resume, "play.fill") { model.setPaused(false) }
+                cardButton(Say.restart, "arrow.counterclockwise") { restart() }
+                cardButton(Say.levels, "square.grid.2x2.fill") { onExit(nil) }
             }
         }
     }
@@ -146,22 +146,22 @@ struct GameView: View {
     private func resultCard(_ r: LevelResult) -> some View {
         let isLast = model.levelIndex + 1 >= Levels.all.count
         return overlayCard {
-            Text(isLast ? "Apna Sassy made it home!" : "Level complete!").font(.largeTitle.weight(.black))
+            Text(isLast ? Say.homeAtLast : Say.levelDone).font(.largeTitle.weight(.black))
             HStack(spacing: 6) {
                 ForEach(0..<3, id: \.self) { i in
                     Image(systemName: i < r.stars ? "star.fill" : "star")
                         .font(.system(size: 36)).foregroundStyle(.yellow)
                 }
             }
-            Text("\(String(format: "%.1f", r.time))s · gems \(r.gems)/\(r.totalGems) · \(r.score) points")
+            Text(Say.summary(seconds: r.time, gems: r.gems, total: r.totalGems, score: r.score))
                 .font(.headline.monospacedDigit())
-            Text("Stars: finish · every gem · under \(Int(Levels.all[model.levelIndex].parTime))s")
+            Text(Say.starRules(par: Int(Levels.all[model.levelIndex].parTime)))
                 .font(.caption).opacity(0.75)
             HStack(spacing: 12) {
-                cardButton("Replay", "arrow.counterclockwise") { restart() }
-                cardButton("Levels", "square.grid.2x2.fill") { onExit(nil) }
+                cardButton(Say.replay, "arrow.counterclockwise") { restart() }
+                cardButton(Say.levels, "square.grid.2x2.fill") { onExit(nil) }
                 if !isLast {
-                    cardButton("Next", "arrow.right") { onExit(model.levelIndex + 1) }
+                    cardButton(Say.next, "arrow.right") { onExit(model.levelIndex + 1) }
                 }
             }
         }
@@ -240,6 +240,6 @@ struct HoldButton: View {
                         onChange(false)
                     }
             )
-            .accessibilityLabel(icon.contains("left") ? "Left" : icon.contains("right") ? "Right" : "Jump")
+            .accessibilityLabel(icon.contains("left") ? Say.left : icon.contains("right") ? Say.right : Say.jump)
     }
 }
