@@ -111,6 +111,19 @@ button:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; 
 .lvl .st { color: var(--marigold); letter-spacing: 2px; font-size: 17px; }
 .hint { font-size: 13px; color: var(--ink); opacity: 0.75; text-align: center; width: 100%; }
 @media (prefers-reduced-motion: reduce) { .ctl { transition: none; } }
+
+/* Always play sideways: iPhone home-screen apps can't lock orientation, so when the phone is
+   upright (e.g. rotation lock on) the whole game is turned 90°. The notch is then on the left. */
+@media (orientation: portrait) {
+  #app {
+    position: fixed; top: 0; left: 100vw; width: 100vh; width: 100dvh; height: 100vw;
+    transform: rotate(90deg); transform-origin: top left;
+  }
+  #hud { padding-top: 10px; padding-left: max(16px, env(safe-area-inset-top, 0px)); padding-right: max(16px, env(safe-area-inset-bottom, 0px)); }
+  #controls { padding-bottom: 14px; padding-left: max(18px, env(safe-area-inset-top, 0px)); padding-right: max(18px, env(safe-area-inset-bottom, 0px)); }
+  .menu-wrap { padding-left: max(16px, env(safe-area-inset-top, 0px)); padding-right: max(16px, env(safe-area-inset-bottom, 0px)); }
+}
+#soundBtn { font-size: 20px; }
 </style>
 
 <div id="app">
@@ -120,6 +133,7 @@ button:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; 
     <button class="round" id="pauseBtn" aria-label="तनी दम धरोॅ">
       <svg viewBox="0 0 20 20"><rect x="4" y="3" width="4" height="14" rx="1"/><rect x="12" y="3" width="4" height="14" rx="1"/></svg>
     </button>
+    <button class="round" id="soundBtn" aria-label="आवाज़">🔊</button>
     <span id="hearts" aria-label="जान"></span>
     <span class="pill"><span class="gem-icon"></span><span id="gems">0/0</span></span>
     <span class="pill" id="timer">0 सेकेंड</span>
@@ -190,6 +204,13 @@ const SAY = {
   homeAtLast: "अपना सैसी घोॅर पहुँची गेलै!",
   summary: (s, g, t, pts) => `${s.toFixed(1)} सेकेंड · हीरा ${g}/${t} · ${pts} अंक`,
   starRules: par => `तारा मिलतौं: पार करला पर · सब हीरा बटोरला पर · ${par} सेकेंड सें पहिनें`,
+  // Spoken out loud (the owner should check the wording)
+  voice: {
+    start: "चलोॅ सैसी, घोॅर चलोॅ!",
+    checkpoint: "बढ़िया! हियाँ तांय आबी गेलियै।",
+    hurt: "आय गे माय!",
+    died: "कोनो बात नै, फेरू सें!",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -639,6 +660,7 @@ class Game {
   }
   effect(e) {
     const w = this.world;
+    sound.event(e, this.index + 1 >= LEVELS.length);
     switch (e.type) {
       case "gem": { const g = w.L.gems[e.i]; this.fx.push({ kind: "pop", x: g.x, y: g.y, t: 0.3, d: 0.3 }); break; }
       case "crate":
@@ -763,6 +785,65 @@ class Game {
 function buzz(pattern) { try { navigator.vibrate && navigator.vibrate(pattern); } catch (_) {} }
 
 // ---------------------------------------------------------------------------
+// Sound: small synth effects, and Sassy's lines read by the phone's Hindi female voice
+// (the closest to Angika a phone has). iPhones only allow sound after a tap, hence unlock().
+const sound = {
+  on: true, ac: null, voice: null,
+  unlock() {
+    try {
+      if (!this.ac) this.ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (this.ac.state === "suspended") this.ac.resume();
+    } catch (_) {}
+  },
+  tone(f0, f1, dur, type = "square", vol = 0.12, at = 0) {
+    if (!this.on || !this.ac) return;
+    const t = this.ac.currentTime + at, o = this.ac.createOscillator(), g = this.ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g).connect(this.ac.destination); o.start(t); o.stop(t + dur + 0.02);
+  },
+  notes(freqs, step = 0.09, type = "triangle") { freqs.forEach((f, i) => this.tone(f, f, step * 1.6, type, 0.14, i * step)); },
+  pickVoice() {
+    const all = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+    const hindi = all.filter(v => /^hi/i.test(v.lang));
+    this.voice = hindi.find(v => /lekha|kalpana|swara|neerja|female/i.test(v.name)) || hindi[0] || null;
+  },
+  say(text) {
+    if (!this.on || !window.speechSynthesis) return;
+    try {
+      if (!this.voice) this.pickVoice();
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "hi-IN"; if (this.voice) u.voice = this.voice;
+      u.rate = 1.0; u.pitch = 1.2;
+      speechSynthesis.speak(u);
+    } catch (_) {}
+  },
+  event(e, lastLevel) {
+    switch (e.type) {
+      case "jumped": this.tone(380, 760, 0.12, "square", 0.08); break;
+      case "sprang": this.tone(300, 1200, 0.25, "sine", 0.16); break;
+      case "gem": this.notes([988, 1319], 0.06); break;
+      case "crate": this.tone(220, 160, 0.09, "square", 0.1); this.notes([1319], 0.06); break;
+      case "stomp": this.tone(520, 110, 0.14, "square", 0.12); break;
+      case "checkpoint": this.notes([523, 659, 784]); this.say(SAY.voice.checkpoint); break;
+      case "hurt": this.tone(320, 110, 0.28, "sawtooth", 0.1); this.say(SAY.voice.hurt); break;
+      case "died": this.tone(420, 70, 0.7, "sawtooth", 0.1); this.say(SAY.voice.died); break;
+      case "won": this.notes([523, 659, 784, 1047], 0.12); this.say(lastLevel ? SAY.homeAtLast : SAY.levelDone); break;
+    }
+  },
+  set(on) {
+    this.on = on;
+    if (!on && window.speechSynthesis) speechSynthesis.cancel();
+    document.getElementById("soundBtn").textContent = on ? "🔊" : "🔇";
+    try { localStorage.setItem("apnaSassy.sound", on ? "1" : "0"); } catch (_) {}
+  },
+};
+try { sound.on = localStorage.getItem("apnaSassy.sound") !== "0"; } catch (_) {}
+if (window.speechSynthesis) speechSynthesis.addEventListener("voiceschanged", () => sound.pickVoice());
+document.addEventListener("pointerdown", () => sound.unlock(), true);
+
+// ---------------------------------------------------------------------------
 // Input: touch buttons, keyboard, and game controllers
 const input = {
   touch: { left: false, right: false, jumpHeld: false },
@@ -855,6 +936,7 @@ function start(i) {
   game = new Game(i);
   $("levelName").textContent = LEVELS[i].name;
   hudCache = {};
+  sound.unlock(); sound.say(SAY.voice.start);
 }
 
 function setPaused(v) {
@@ -886,6 +968,8 @@ function updateHud() {
 }
 
 $("pauseBtn").addEventListener("click", () => setPaused(true));
+$("soundBtn").addEventListener("click", () => sound.set(!sound.on));
+sound.set(sound.on);
 $("resumeBtn").addEventListener("click", () => setPaused(false));
 $("restartBtn").addEventListener("click", () => start(game.index));
 $("menuBtn").addEventListener("click", showMenu);
