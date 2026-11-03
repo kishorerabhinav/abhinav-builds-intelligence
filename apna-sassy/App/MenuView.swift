@@ -18,7 +18,7 @@ struct MenuView: View {
                         .interpolation(.none)
                         .resizable()
                         .frame(width: 126, height: 91)
-                    Text("Sassy's Leap")
+                    Text("Apna Sassy")
                         .font(.system(size: 44, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.35), radius: 0, x: 3, y: 3)

@@ -1,5 +1,5 @@
 # Generate the Xcode project with:  brew install xcodegen && xcodegen generate
-name: SassysLeap
+name: ApnaSassy
 options:
   bundleIdPrefix: com.example
   deploymentTarget:
@@ -13,7 +13,7 @@ settings:
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
-  SassysLeap:
+  ApnaSassy:
     type: application
     platform: iOS
     sources: [App]
@@ -21,10 +21,10 @@ targets:
       - package: GameCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.SassysLeap
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.ApnaSassy
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: "Sassy's Leap"
+        INFOPLIST_KEY_CFBundleDisplayName: "Apna Sassy"
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.platform-games
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES

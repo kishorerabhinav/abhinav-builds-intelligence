@@ -1,4 +1,4 @@
-# Sassy's Leap
+# Apna Sassy
 
 An original side-scrolling platformer for iPhone (iOS 17 and later, built for iOS 27). You play
 Sassy, a Saint Bernard in a blue harness, trying to get home across four worlds. Run, jump, stomp critters, pop crates
@@ -34,13 +34,13 @@ You need a Mac with Xcode.
 
 ```bash
 brew install xcodegen
-cd sassys-leap
+cd apna-sassy
 xcodegen generate
-open SassysLeap.xcodeproj
+open ApnaSassy.xcodeproj
 ```
 
 In Xcode, pick your team under **Signing & Capabilities** (a free Apple ID works), change the
-bundle ID from `com.example.SassysLeap` to something unique, plug in your iPhone, and press Run.
+bundle ID from `com.example.ApnaSassy` to something unique, plug in your iPhone, and press Run.
 The first time, approve the developer on the phone in Settings › General › VPN & Device
 Management.
 
@@ -62,7 +62,7 @@ jumps feel fair on a touch screen.
 ## Tests
 
 ```bash
-cd sassys-leap && swift test
+cd apna-sassy && swift test
 ```
 
 Besides unit tests for jumping, walls, crates, stomping, spikes, springs, platforms and

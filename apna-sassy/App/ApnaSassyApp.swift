@@ -2,7 +2,7 @@ import GameCore
 import SwiftUI
 
 @main
-struct SassysLeapApp: App {
+struct ApnaSassyApp: App {
     @State private var progress = ProgressStore()
     @State private var playing: Int?
 
