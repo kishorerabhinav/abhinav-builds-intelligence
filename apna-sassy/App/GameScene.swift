@@ -55,6 +55,7 @@ final class GameScene: SKScene {
         buildBackdrop()
         buildLevel()
         follow(immediately: true)
+        Sound.shared.say(Say.Voice.start)
     }
 
     override func didChangeSize(_ oldSize: CGSize) {
@@ -263,6 +264,7 @@ final class GameScene: SKScene {
 
     private func play(_ event: GameEvent) {
         onEvent?(event)
+        Sound.shared.play(event, lastLevel: world.level.definition.name == Levels.all.last?.name)
         switch event {
         case .gemCollected(let i):
             gemNodes[i]?.removeAllActions()

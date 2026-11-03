@@ -18,8 +18,12 @@ head=('<!doctype html>\n<html lang="hi">\n<head>\n<meta charset="utf-8">\n'
  '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n'
  '<meta name="theme-color" content="#6ec6ff">\n'
  '<link rel="manifest" href="manifest.webmanifest">\n')
-register=('\n<script>\nif ("serviceWorker" in navigator) addEventListener("load", () => '
- 'navigator.serviceWorker.register("sw.js").catch(() => {}));\n</script>\n')
+# Reload once when a new version takes over, so an update shows up straight away.
+register=('\n<script>\nif ("serviceWorker" in navigator) {\n'
+ '  const hadOne = !!navigator.serviceWorker.controller;\n'
+ '  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadOne) location.reload(); });\n'
+ '  addEventListener("load", () => navigator.serviceWorker.register("sw.js").then(r => r.update()).catch(() => {}));\n'
+ '}\n</script>\n')
 page=head+page+register
 open(os.path.join(OUT,'index.html'),'w',encoding='utf-8').write(page)
 
@@ -40,9 +44,18 @@ self.addEventListener("activate", e => {{
     .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 }});
-// Cache first (works offline); fonts from Google are cached the first time they load.
+// The page itself: network first so updates arrive, cached copy when offline.
+// Everything else: cache first; fonts from Google are cached the first time they load.
 self.addEventListener("fetch", e => {{
   if (e.request.method !== "GET") return;
+  if (e.request.mode === "navigate") {{
+    e.respondWith(fetch(e.request, {{ cache: "no-store" }}).then(res => {{
+      const copy = res.clone();
+      caches.open(CACHE).then(c => c.put("index.html", copy));
+      return res;
+    }}).catch(() => caches.match("index.html")));
+    return;
+  }}
   e.respondWith(caches.match(e.request, {{ ignoreSearch: true }}).then(hit => hit || fetch(e.request).then(res => {{
     const copy = res.clone();
     caches.open(CACHE).then(c => c.put(e.request, copy));

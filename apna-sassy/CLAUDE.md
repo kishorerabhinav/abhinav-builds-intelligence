@@ -42,7 +42,9 @@ Levels (in order): गंगा किनारोॅ (meadow), खड़गप�
 - Web version only: sound effects (Web Audio synth) and spoken Angika lines (`SAY.voice`, read by
   the phone's Hindi female voice via speechSynthesis; 🔊 button in the HUD mutes). In portrait it
   rotates the whole game 90° so it always plays landscape (iOS web apps can't lock orientation).
-  The iOS app has no sound yet. Real recordings of a voice would sound more Angika than TTS.
+  The iOS app does the same in `App/Sound.swift` (AVAudioEngine synth + AVSpeechSynthesizer, no
+  mute button yet). Web sound unlocks on the first tap and sets `navigator.audioSession.type =
+  "playback"` so the silent switch doesn't mute it. Real recordings of a voice would sound more Angika than TTS.
 - Work lives on branch `claude/sprout-platformer` (not merged to `main`).
 
 ## Where we are: installing on the owner's iPhone from Windows

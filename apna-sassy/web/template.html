@@ -788,11 +788,20 @@ function buzz(pattern) { try { navigator.vibrate && navigator.vibrate(pattern); 
 // Sound: small synth effects, and Sassy's lines read by the phone's Hindi female voice
 // (the closest to Angika a phone has). iPhones only allow sound after a tap, hence unlock().
 const sound = {
-  on: true, ac: null, voice: null,
+  on: true, ac: null, voice: null, primed: false,
   unlock() {
     try {
+      // "playback" lets sound through even with the iPhone's silent switch on (iOS 17+)
+      if (navigator.audioSession) navigator.audioSession.type = "playback";
       if (!this.ac) this.ac = new (window.AudioContext || window.webkitAudioContext)();
-      if (this.ac.state === "suspended") this.ac.resume();
+      if (this.ac.state !== "running") this.ac.resume();
+      // iOS only starts audio that begins inside a tap: play a silent blip and an empty phrase
+      const b = this.ac.createBufferSource(); b.buffer = this.ac.createBuffer(1, 1, 22050);
+      b.connect(this.ac.destination); b.start(0);
+      if (!this.primed && window.speechSynthesis) {
+        this.primed = true;
+        const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u);
+      }
     } catch (_) {}
   },
   tone(f0, f1, dur, type = "square", vol = 0.12, at = 0) {
@@ -841,7 +850,7 @@ const sound = {
 };
 try { sound.on = localStorage.getItem("apnaSassy.sound") !== "0"; } catch (_) {}
 if (window.speechSynthesis) speechSynthesis.addEventListener("voiceschanged", () => sound.pickVoice());
-document.addEventListener("pointerdown", () => sound.unlock(), true);
+for (const t of ["pointerdown", "touchend", "click"]) document.addEventListener(t, () => sound.unlock(), true);
 
 // ---------------------------------------------------------------------------
 // Input: touch buttons, keyboard, and game controllers

@@ -31,6 +31,14 @@ enum Say {
         "तारा मिलतौं: पार करला पर · सब हीरा बटोरला पर · \(par) सेकेंड सें पहिनें"
     }
 
+    // Spoken out loud (same as SAY.voice in web/template.html)
+    enum Voice {
+        static let start = "चलोॅ सैसी, घोॅर चलोॅ!"
+        static let checkpoint = "बढ़िया! हियाँ तांय आबी गेलियै।"
+        static let hurt = "आय गे माय!"
+        static let died = "कोनो बात नै, फेरू सें!"
+    }
+
     // Controls (VoiceOver)
     static let left = "बायाँ"
     static let right = "दायाँ"
