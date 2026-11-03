@@ -27,6 +27,7 @@ crates for gems and bounces on springs across four levels named after places aro
 | `Tests/GameCoreTests/` | 13 tests, including a bot that must finish all 4 levels without dying. Run `swift test`. |
 | `project.yml` | XcodeGen spec (`xcodegen generate` → `ApnaSassy.xcodeproj`). Bundle ID is still the placeholder `com.example.ApnaSassy`. |
 | `web/` | Browser version: same rules/levels/art/text ported to JS. `python web/build.py` regenerates `web/index.html` from the Swift sources. Published privately at https://claude.ai/artifact/KLqxjz6frnyC7fmHCjBaTF |
+| `web/build_pwa.py` | Wraps `web/index.html` into an installable home-screen app (manifest, offline service worker, icons) in `web/site/` (git-ignored). The "Apna Sassy web app" workflow builds it and pushes it to the `gh-pages` branch, served at https://kishorerabhinav.github.io/abhinav-builds-intelligence/ — the owner's no-cable way to install: Safari › Share › Add to Home Screen. |
 | `docs/` | `app-icon.png` (1024², made from a photo of Sassy cut out onto the meadow sky), sprite preview. |
 | `../.github/workflows/apna-sassy-ios.yml` | GitHub Actions on `macos-15`: runs tests, generates the project, builds an **unsigned** `.ipa`, uploads it as artifact `ApnaSassy-unsigned-ipa`. |
 
