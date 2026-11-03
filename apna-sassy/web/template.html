@@ -1,0 +1,923 @@
+<title>Apna Sassy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="अपना सैसी">
+<link rel="apple-touch-icon" href="__ICON__">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Mukta:wght@500;700&display=swap">
+<style>
+/* Layout: one full-screen play field; DOM overlays for menu, HUD and touch controls.
+   A single deliberate look (a sunny Bihar sky), so no light/dark split. */
+:root {
+  --sky: #6ec6ff;
+  --sky-low: #c9ecff;
+  --ink: #2a1a10;          /* Sassy's outline brown-black */
+  --coat: #c0702a;         /* her coat */
+  --cream: #fbf7ef;        /* her blaze */
+  --marigold: #ffb627;     /* genda phool, the accent */
+  --leaf: #3e9a35;
+  --glass: rgba(42, 26, 16, 0.42);
+  --display: "Baloo 2", "Kohinoor Devanagari", "Noto Sans Devanagari", system-ui, sans-serif;
+  --body: "Mukta", "Kohinoor Devanagari", "Noto Sans Devanagari", system-ui, sans-serif;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; overflow: hidden; background: var(--sky); color: var(--cream);
+  font-family: var(--body); -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none; touch-action: none; -webkit-tap-highlight-color: transparent;
+}
+#app { position: relative; height: 100%; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
+
+/* HUD */
+#hud {
+  position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 10px;
+  padding-top: max(10px, env(safe-area-inset-top, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; pointer-events: none;
+}
+#hud > * { pointer-events: auto; }
+.pill { display: flex; align-items: center; gap: 6px; background: var(--glass); padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
+.round { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--glass); display: grid; place-items: center; }
+.round svg { width: 18px; height: 18px; fill: var(--cream); }
+#hearts { letter-spacing: 2px; color: #ff5a5a; font-size: 20px; text-shadow: 0 1px 0 var(--ink); }
+#levelName { margin-left: auto; font-family: var(--display); font-weight: 600; opacity: 0.95; text-shadow: 0 1px 2px var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.gem-icon { width: 14px; height: 14px; background: #2fd6c8; transform: rotate(45deg); border-radius: 2px; box-shadow: inset 3px 3px 0 #b8fff6; }
+
+/* Touch controls */
+#controls {
+  position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; justify-content: space-between;
+  padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(18px, env(safe-area-inset-left, 0px));
+  padding-right: max(18px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+#controls .pad { display: flex; gap: 14px; pointer-events: auto; }
+.ctl {
+  width: 78px; height: 78px; border-radius: 50%; border: 2px solid rgba(251, 247, 239, 0.4);
+  background: var(--glass); display: grid; place-items: center; touch-action: none; pointer-events: auto;
+  transition: transform 60ms, background 60ms;
+}
+.ctl svg { width: 34px; height: 34px; fill: var(--cream); }
+.ctl.down { transform: scale(0.92); background: rgba(42, 26, 16, 0.65); }
+#jump { width: 96px; height: 96px; }
+#jump svg { width: 40px; height: 40px; }
+
+/* Screens and cards */
+.screen { position: absolute; inset: 0; display: grid; place-items: center; overflow: auto; }
+.veil { background: rgba(20, 12, 6, 0.5); }
+.card {
+  display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;
+  background: rgba(42, 26, 16, 0.82); border: 2px solid rgba(255, 182, 39, 0.5); border-radius: 22px;
+  padding: 24px 26px; margin: 16px; max-width: min(520px, calc(100% - 32px));
+}
+.card h2 { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 6vw, 38px); line-height: 1.1; margin: 0; text-wrap: balance; }
+.card p { margin: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.btn { border: 0; border-radius: 999px; padding: 10px 20px; font-weight: 700; font-size: 17px; background: rgba(251, 247, 239, 0.16); }
+.btn.primary { background: var(--marigold); color: var(--ink); }
+.stars { font-size: 38px; color: var(--marigold); letter-spacing: 6px; }
+.dim { opacity: 0.8; font-size: 14px; }
+
+/* Menu */
+#menu { background: linear-gradient(var(--sky), var(--sky-low)); }
+.menu-wrap {
+  display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: center; justify-content: center;
+  padding-block: 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.brand { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.brand img { width: 132px; height: 132px; border-radius: 30px; box-shadow: 0 6px 0 var(--ink), 0 10px 24px rgba(0,0,0,0.25); }
+.brand h1 { font-family: var(--display); font-weight: 800; font-size: clamp(40px, 9vw, 58px); line-height: 1; margin: 6px 0 0; color: var(--cream); text-shadow: 3px 3px 0 var(--ink); }
+.brand .total { background: var(--glass); padding: 4px 14px; border-radius: 999px; font-weight: 700; color: var(--marigold); }
+.levels { display: flex; flex-direction: column; gap: 10px; width: min(360px, 100%); }
+.lvl {
+  display: grid; grid-template-columns: 42px 1fr auto; gap: 12px; align-items: center; text-align: left;
+  border: 0; border-radius: 16px; padding: 10px 14px; color: var(--cream);
+  box-shadow: 0 4px 0 rgba(42, 26, 16, 0.55);
+}
+.lvl:disabled { opacity: 0.5; cursor: default; }
+.lvl .num { width: 42px; height: 42px; border-radius: 11px; background: rgba(255,255,255,0.22); display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 22px; }
+.lvl .name { font-family: var(--display); font-weight: 800; font-size: 19px; line-height: 1.15; }
+.lvl .sub { font-size: 13px; opacity: 0.9; }
+.lvl .st { color: var(--marigold); letter-spacing: 2px; font-size: 17px; }
+.hint { font-size: 13px; color: var(--ink); opacity: 0.75; text-align: center; width: 100%; }
+@media (prefers-reduced-motion: reduce) { .ctl { transition: none; } }
+</style>
+
+<div id="app">
+  <canvas id="game" aria-label="खेल"></canvas>
+
+  <div id="hud" hidden>
+    <button class="round" id="pauseBtn" aria-label="तनी दम धरोॅ">
+      <svg viewBox="0 0 20 20"><rect x="4" y="3" width="4" height="14" rx="1"/><rect x="12" y="3" width="4" height="14" rx="1"/></svg>
+    </button>
+    <span id="hearts" aria-label="जान"></span>
+    <span class="pill"><span class="gem-icon"></span><span id="gems">0/0</span></span>
+    <span class="pill" id="timer">0 सेकेंड</span>
+    <span id="levelName"></span>
+  </div>
+
+  <div id="controls" hidden>
+    <div class="pad">
+      <button class="ctl" id="left" aria-label="बायाँ"><svg viewBox="0 0 20 20"><path d="M13 3 4 10l9 7z"/></svg></button>
+      <button class="ctl" id="right" aria-label="दायाँ"><svg viewBox="0 0 20 20"><path d="m7 3 9 7-9 7z"/></svg></button>
+    </div>
+    <div class="pad">
+      <button class="ctl" id="jump" aria-label="कूदोॅ"><svg viewBox="0 0 20 20"><path d="M10 2 3 10h4.5v8h5v-8H17z"/></svg></button>
+    </div>
+  </div>
+
+  <div id="menu" class="screen">
+    <div class="menu-wrap">
+      <div class="brand">
+        <img src="__ICON__" alt="सैसी">
+        <h1>अपना सैसी</h1>
+        <span class="total" id="totalStars">★ 0 / 12</span>
+      </div>
+      <div class="levels" id="levels"></div>
+      <p class="hint">मोबाइल तिरछा करोॅ · बायाँ अँगूठा सें चलोॅ, दायाँ सें कूदोॅ</p>
+    </div>
+  </div>
+
+  <div id="pause" class="screen veil" hidden>
+    <div class="card">
+      <h2>तनी दम धरोॅ</h2>
+      <div class="row">
+        <button class="btn primary" id="resumeBtn">आगू चलोॅ</button>
+        <button class="btn" id="restartBtn">फेरू सें</button>
+        <button class="btn" id="menuBtn">लेवल</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="result" class="screen veil" hidden>
+    <div class="card">
+      <h2 id="resultTitle"></h2>
+      <div class="stars" id="resultStars"></div>
+      <p id="resultLine" style="font-weight:700;font-variant-numeric:tabular-nums"></p>
+      <p class="dim" id="resultRules"></p>
+      <div class="row">
+        <button class="btn" id="replayBtn">फेरू खेलोॅ</button>
+        <button class="btn" id="menuBtn2">लेवल</button>
+        <button class="btn primary" id="nextBtn">अगलका</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------------------
+// Data copied from the iOS game's source (Levels.swift and Art.swift)
+const LEVELS = /*LEVELS*/;
+const SPRITES = /*SPRITES*/;
+
+const SAY = {
+  best: (s, pts) => `सबसें बढ़िया ${s.toFixed(1)} सेकेंड · ${pts} अंक`,
+  notPlayed: "अभी तांय नै खेललौ",
+  locked: "पहिलकोॅ लेवल पार करोॅ",
+  seconds: s => `${s} सेकेंड`,
+  levelDone: "की बात छै! लेवल पार होय गेलै!",
+  homeAtLast: "अपना सैसी घोॅर पहुँची गेलै!",
+  summary: (s, g, t, pts) => `${s.toFixed(1)} सेकेंड · हीरा ${g}/${t} · ${pts} अंक`,
+  starRules: par => `तारा मिलतौं: पार करला पर · सब हीरा बटोरला पर · ${par} सेकेंड सें पहिनें`,
+};
+
+// ---------------------------------------------------------------------------
+// Game rules: a straight port of GameCore/World.swift
+const PH = {
+  gravity: 62, maxFall: 20, runSpeed: 7.5, groundAccel: 55, airAccel: 38, groundFriction: 45,
+  airFriction: 12, jumpVelocity: 20, jumpCut: 7, spring: 27, stomp: 11, stompHeld: 18,
+  coyote: 0.1, buffer: 0.12, hurt: 1.4, respawn: 1.2, step: 1 / 120,
+};
+const PW = 0.7, PHT = 0.9, MAX_HEARTS = 3;
+const SOLID = new Set(["ground", "brick", "crate", "used"]);
+const isSolid = t => SOLID.has(t);
+const isStandable = t => isSolid(t) || t === "platform" || t === "spring";
+const ENEMY_SIZE = { beetle: [0.8, 0.6], spiker: [0.8, 0.7], bat: [0.8, 0.5] };
+
+function parseLevel(def) {
+  const rows = def.map.split("\n").filter(r => r.length);
+  const h = rows.length, w = Math.max(...rows.map(r => r.length));
+  const tiles = new Array(w * h).fill("empty");
+  const L = { def, w, h, tiles, checkpoints: [], gems: [], enemies: [], start: null, goal: null };
+  const map = { "#": "ground", "B": "brick", "C": "crate", "=": "platform", "^": "spike", "S": "spring" };
+  rows.forEach((row, ri) => {
+    const y = h - 1 - ri;
+    [...row].forEach((ch, x) => {
+      const fx = x + 0.5;
+      if (map[ch]) tiles[y * w + x] = map[ch];
+      else if (ch === "P") L.start = { x: fx, y };
+      else if (ch === "G") L.goal = { x: fx, y };
+      else if (ch === "K") L.checkpoints.push({ x: fx, y });
+      else if (ch === "*") L.gems.push({ x: fx, y: y + 0.5 });
+      else if (ch === "e") L.enemies.push({ kind: "beetle", x: fx, y });
+      else if (ch === "b") L.enemies.push({ kind: "bat", x: fx, y: y + 0.2 });
+      else if (ch === "s") L.enemies.push({ kind: "spiker", x: fx, y });
+    });
+  });
+  L.checkpoints.sort((a, b) => a.x - b.x);
+  L.crates = tiles.filter(t => t === "crate").length;
+  L.tile = (x, y) => {
+    if (x < 0 || x >= w) return y >= 0 ? "ground" : "empty";
+    if (y < 0 || y >= h) return "empty";
+    return tiles[y * w + x];
+  };
+  L.set = (x, y, t) => { if (x >= 0 && x < w && y >= 0 && y < h) tiles[y * w + x] = t; };
+  return L;
+}
+
+const box = (x, y, w, h) => ({ x0: x - w / 2, y0: y, x1: x + w / 2, y1: y + h });
+const hits = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+const inset = (b, d) => ({ x0: b.x0 + d, y0: b.y0 + d, x1: b.x1 - d, y1: b.y1 - d });
+const approach = (v, t, d) => v < t ? Math.min(v + d, t) : Math.max(v - d, t);
+const newPlayer = p => ({ x: p.x, y: p.y, vx: 0, vy: 0, facing: 1, onGround: false, hearts: MAX_HEARTS,
+  hurt: 0, dead: false, deadT: 0, coyote: 0, buffer: 0, jumping: false });
+
+class World {
+  constructor(def) {
+    this.L = parseLevel(def);
+    this.p = newPlayer(this.L.start);
+    this.enemies = this.L.enemies.map((e, i) => ({ id: i, kind: e.kind, x: e.x, y: e.y, vx: 0, vy: 0,
+      alive: true, awake: false, ox: e.x, oy: e.y, phase: 0 }));
+    this.gemTaken = this.L.gems.map(() => false);
+    this.gems = 0; this.totalGems = this.L.gems.length + this.L.crates;
+    this.score = 0; this.deaths = 0; this.time = 0; this.result = null; this.cp = -1;
+    this.events = []; this.lastPresses = 0; this.acc = 0;
+  }
+  get pose() {
+    const p = this.p;
+    if (this.result) return "cheer";
+    if (p.dead) return "dead";
+    if (p.hurt > PH.hurt - 0.35) return "hurt";
+    if (!p.onGround) return p.vy > 0 ? "jump" : "fall";
+    return Math.abs(p.vx) > 0.5 ? "run" : "idle";
+  }
+  drain() { const e = this.events; this.events = []; return e; }
+  update(dt, input) {
+    if (this.result) return;
+    this.acc += Math.min(dt, 0.1);
+    while (this.acc >= PH.step) {
+      this.acc -= PH.step;
+      this.step(PH.step, input);
+      if (this.result) break;
+    }
+  }
+  step(dt, input) {
+    this.time += dt;
+    const p = this.p;
+    if (p.dead) { p.deadT -= dt; if (p.deadT <= 0) this.respawn(); return; }
+    this.updatePlayer(dt, input);
+    for (const e of this.enemies) this.updateEnemy(e, dt);
+    this.checkPickups();
+    this.checkEnemies(input);
+    this.checkHazards();
+    if (hits(box(this.p.x, this.p.y, PW, PHT), box(this.L.goal.x, this.L.goal.y, 0.8, 3))) this.win();
+  }
+  updatePlayer(dt, input) {
+    const p = this.p, L = this.L;
+    const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+    if (dir !== 0 && p.hurt < PH.hurt - 0.3) {
+      p.facing = dir;
+      p.vx = approach(p.vx, dir * PH.runSpeed, (p.onGround ? PH.groundAccel : PH.airAccel) * dt);
+    } else {
+      p.vx = approach(p.vx, 0, (p.onGround ? PH.groundFriction : PH.airFriction) * dt);
+    }
+    if (input.jumpPresses !== this.lastPresses) { this.lastPresses = input.jumpPresses; p.buffer = PH.buffer; }
+    p.buffer = Math.max(0, p.buffer - dt);
+    p.coyote = p.onGround ? PH.coyote : Math.max(0, p.coyote - dt);
+    p.hurt = Math.max(0, p.hurt - dt);
+    if (p.buffer > 0 && p.coyote > 0) {
+      p.vy = PH.jumpVelocity; p.buffer = 0; p.coyote = 0; p.onGround = false; p.jumping = true;
+      this.events.push({ type: "jumped" });
+    }
+    if (p.jumping && !input.jumpHeld && p.vy > PH.jumpCut) p.vy = PH.jumpCut;
+    if (p.vy <= 0) p.jumping = false;
+    p.vy = Math.max(p.vy - PH.gravity * dt, -PH.maxFall);
+
+    p.x += p.vx * dt;
+    this.resolveX(p, PW, PHT);
+    const was = p.onGround, prevBottom = p.y;
+    p.y += p.vy * dt;
+    const hit = this.resolveY(p, PW, PHT, prevBottom);
+    p.onGround = hit.landed;
+    if (hit.landed && !was) this.events.push({ type: "landed" });
+    const footRow = Math.floor(p.y + 0.01);
+    const walkedOntoSpring = p.vy <= 0 && L.tile(Math.floor(p.x), footRow) === "spring" && p.y - footRow < 0.6;
+    if (walkedOntoSpring) p.y = footRow + 1;
+    if (hit.onSpring || walkedOntoSpring) {
+      p.vy = PH.spring; p.onGround = false; p.jumping = false;
+      this.events.push({ type: "sprang" });
+    }
+    if (hit.head) this.bump(hit.head[0], hit.head[1]);
+    if (p.y < -2) p.hearts = 0;
+    if (p.hearts <= 0) this.die();
+  }
+  updateEnemy(e, dt) {
+    if (!e.alive) return;
+    const L = this.L;
+    if (!e.awake) {
+      if (Math.abs(e.x - this.p.x) >= 13) return;
+      e.awake = true;
+      e.vx = e.kind === "bat" ? 0 : -(e.kind === "spiker" ? 1.6 : 2.0);
+    }
+    if (e.kind === "bat") {
+      e.phase += dt * 1.3;
+      const nx = e.ox + 2.5 * Math.sin(e.phase);
+      e.vx = (nx - e.x) / dt;
+      e.x = nx; e.y = e.oy + 0.6 * Math.sin(e.phase * 2);
+      return;
+    }
+    const [w, h] = ENEMY_SIZE[e.kind];
+    const speed = Math.abs(e.vx), before = e.vx;
+    e.x += e.vx * dt;
+    this.resolveX(e, w, h);
+    if (e.vx === 0) e.vx = before > 0 ? -speed : speed;
+    e.vy = Math.max(e.vy - PH.gravity * dt, -PH.maxFall);
+    const prevBottom = e.y;
+    e.y += e.vy * dt;
+    const hit = this.resolveY(e, w, h, prevBottom);
+    if (hit.landed) {
+      const ax = e.x + (e.vx > 0 ? w / 2 + 0.05 : -w / 2 - 0.05);
+      const tx = Math.floor(ax), ty = Math.floor(e.y - 0.1);
+      if (!isStandable(L.tile(tx, ty)) || L.tile(tx, ty + 1) === "spike") e.vx = -e.vx;
+    }
+    if (e.y < -2) e.alive = false;
+  }
+  checkPickups() {
+    const b = box(this.p.x, this.p.y, PW, PHT);
+    this.L.gems.forEach((g, i) => {
+      if (this.gemTaken[i]) return;
+      if (hits(b, { x0: g.x - 0.3, y0: g.y - 0.3, x1: g.x + 0.3, y1: g.y + 0.3 })) {
+        this.gemTaken[i] = true; this.gems++; this.score += 100;
+        this.events.push({ type: "gem", i });
+      }
+    });
+    this.L.checkpoints.forEach((c, i) => {
+      if (i <= this.cp) return;
+      if (hits(b, box(c.x, c.y, 0.8, 2))) { this.cp = i; this.events.push({ type: "checkpoint", i }); }
+    });
+  }
+  checkEnemies(input) {
+    const p = this.p;
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      const [w, h] = ENEMY_SIZE[e.kind];
+      const b = box(p.x, p.y, PW, PHT);
+      if (!hits(b, inset(box(e.x, e.y, w, h), 0.05))) continue;
+      const fallingOnto = p.vy < 0 && b.y0 > e.y + h * 0.45;
+      if (e.kind !== "spiker" && fallingOnto) {
+        e.alive = false;
+        p.vy = input.jumpHeld ? PH.stompHeld : PH.stomp;
+        p.y = Math.max(p.y, e.y + h);
+        this.score += 200;
+        this.events.push({ type: "stomp", e });
+      } else {
+        this.hurt(e.x);
+      }
+    }
+  }
+  checkHazards() {
+    const p = this.p, L = this.L;
+    const b = inset(box(p.x, p.y, PW, PHT), 0.12);
+    for (let y = Math.floor(b.y0); y <= Math.floor(b.y1); y++) {
+      for (let x = Math.floor(b.x0); x <= Math.floor(b.x1); x++) {
+        if (L.tile(x, y) !== "spike") continue;
+        if (hits(b, { x0: x + 0.1, y0: y, x1: x + 0.9, y1: y + 0.5 })) {
+          this.hurt(x + 0.5);
+          if (p.vy < 9) p.vy = 12;
+          return;
+        }
+      }
+    }
+  }
+  resolveX(o, w, h) {
+    const eps = 0.001, b = box(o.x, o.y, w, h), L = this.L;
+    const y0 = Math.floor(b.y0 + eps), y1 = Math.floor(b.y1 - eps);
+    if (o.vx > 0) {
+      const col = Math.floor(b.x1);
+      for (let y = y0; y <= y1; y++) if (isSolid(L.tile(col, y))) { o.x = col - w / 2 - eps; o.vx = 0; break; }
+    } else if (o.vx < 0) {
+      const col = Math.floor(b.x0);
+      for (let y = y0; y <= y1; y++) if (isSolid(L.tile(col, y))) { o.x = col + 1 + w / 2 + eps; o.vx = 0; break; }
+    }
+  }
+  resolveY(o, w, h, prevBottom) {
+    const eps = 0.001, b = box(o.x, o.y, w, h), L = this.L;
+    const x0 = Math.floor(b.x0 + eps), x1 = Math.floor(b.x1 - eps);
+    const hit = { landed: false, onSpring: false, head: null };
+    if (o.vy <= 0) {
+      const row = Math.floor(b.y0), top = row + 1;
+      let landed = false, springs = 0;
+      for (let x = x0; x <= x1; x++) {
+        const t = L.tile(x, row);
+        const oneWay = (t === "platform" || t === "spring") && prevBottom >= top - eps;
+        if (isSolid(t) || oneWay) { landed = true; if (t === "spring") springs++; }
+      }
+      if (landed) { o.y = top; o.vy = 0; hit.landed = true; hit.onSpring = springs > 0; }
+    } else {
+      const row = Math.floor(b.y1);
+      const solids = [];
+      for (let x = x0; x <= x1; x++) if (isSolid(L.tile(x, row))) solids.push(x);
+      if (solids.length) {
+        o.y = row - h - eps; o.vy = 0;
+        const c = Math.floor(o.x);
+        hit.head = [solids.includes(c) ? c : solids[0], row];
+      }
+    }
+    return hit;
+  }
+  bump(x, y) {
+    if (this.L.tile(x, y) !== "crate") return;
+    this.L.set(x, y, "used");
+    this.gems++; this.score += 100;
+    this.events.push({ type: "crate", x, y });
+    for (const e of this.enemies) {
+      if (!e.alive || e.kind === "bat") continue;
+      if (Math.abs(e.x - (x + 0.5)) < 0.9 && Math.abs(e.y - (y + 1)) < 0.2) {
+        e.alive = false; this.score += 200; this.events.push({ type: "stomp", e });
+      }
+    }
+  }
+  hurt(fromX) {
+    const p = this.p;
+    if (p.hurt > 0 || p.dead) return;
+    p.hearts--; p.hurt = PH.hurt;
+    p.vx = p.x < fromX ? -6 : 6; p.vy = 9; p.onGround = false;
+    this.events.push({ type: "hurt" });
+    if (p.hearts <= 0) this.die();
+  }
+  die() {
+    const p = this.p;
+    if (p.dead) return;
+    p.dead = true; p.hearts = 0; p.deadT = PH.respawn; p.vx = 0; p.vy = 0;
+    this.deaths++;
+    this.events.push({ type: "died" });
+  }
+  respawn() {
+    const spot = this.cp >= 0 ? this.L.checkpoints[this.cp] : this.L.start;
+    this.p = newPlayer(spot);
+    this.p.hurt = 1.0;
+    this.events.push({ type: "respawned" });
+  }
+  win() {
+    const par = this.L.def.parTime;
+    this.score += Math.max(0, Math.floor((par - this.time) * 10)) * 10 + this.p.hearts * 500;
+    let stars = 1;
+    if (this.gems === this.totalGems) stars++;
+    if (this.time <= par) stars++;
+    this.result = { time: this.time, gems: this.gems, totalGems: this.totalGems, deaths: this.deaths, score: this.score, stars };
+    this.p.vx = 0; this.p.vy = 0;
+    this.events.push({ type: "won" });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Art: the same pixel drawings as Art.swift, painted onto small canvases
+const hex = n => "#" + n.toString(16).padStart(6, "0");
+function canvasArt(w, h, paint) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  const fill = (x, y, ww, hh, color) => { g.fillStyle = color; g.fillRect(x, y, ww, hh); };
+  paint(fill, g);
+  return c;
+}
+function spriteArt(rows, palette) {
+  const w = Math.max(...rows.map(r => r.length));
+  return canvasArt(w, rows.length, fill => {
+    rows.forEach((row, y) => [...row].forEach((ch, x) => { if (palette[ch]) fill(x, y, 1, 1, palette[ch]); }));
+  });
+}
+
+const PALETTES = {
+  meadow: { skyTop: 0x6ec6ff, skyBottom: 0xc9ecff, hills: "#8fd18a", grass: 0x5bbf4a, grassDark: 0x3e9a35, dirt: 0xb07443, dirtDark: 0x86532c, brick: 0xd0703f, brickDark: 0x8e4424 },
+  cavern: { skyTop: 0x14121f, skyBottom: 0x2b2740, hills: "#231f35", grass: 0x4f9a77, grassDark: 0x346b52, dirt: 0x5c5574, dirtDark: 0x403a55, brick: 0x7a6aa0, brickDark: 0x4a3f68 },
+  sky:    { skyTop: 0x8ab8ff, skyBottom: 0xffe3f1, hills: "rgba(255,255,255,0.7)", grass: 0xffffff, grassDark: 0xd7e8fb, dirt: 0xe8f1fb, dirtDark: 0xbfd5ee, brick: 0xf2b8d0, brickDark: 0xc9849f },
+  dusk:   { skyTop: 0x3a2a63, skyBottom: 0xf3a06f, hills: "#52386e", grass: 0x739a52, grassDark: 0x4f733a, dirt: 0x7c4b5c, dirtDark: 0x58303f, brick: 0x95506a, brickDark: 0x5e2c40 },
+};
+
+function tileArt(pal) {
+  const P = k => hex(pal[k]);
+  const speckles = [[3, 7], [11, 9], [6, 12], [13, 14], [1, 14], [9, 5]];
+  const wood = "#d99a4e", woodDark = "#8a5a2b", edge = "#4a2f15", gem = "#2fd6c8";
+  const crate = used => canvasArt(16, 16, f => {
+    f(0, 0, 16, 16, used ? woodDark : wood);
+    f(0, 0, 16, 1, edge); f(0, 15, 16, 1, edge); f(0, 0, 1, 16, edge); f(15, 0, 1, 16, edge);
+    f(2, 2, 12, 1, woodDark); f(2, 13, 12, 1, woodDark);
+    if (!used) {
+      f(7, 4, 2, 1, gem); f(6, 5, 4, 1, gem); f(5, 6, 6, 2, gem); f(6, 8, 4, 1, gem); f(7, 9, 2, 1, gem);
+      f(6, 6, 2, 1, "#b8fff6");
+    }
+  });
+  return {
+    fill: canvasArt(16, 16, f => { f(0, 0, 16, 16, P("dirt")); speckles.forEach(([x, y]) => f(x, y, 2, 1, P("dirtDark"))); }),
+    top: canvasArt(16, 16, f => {
+      f(0, 0, 16, 16, P("dirt"));
+      speckles.forEach(([x, y]) => { if (y > 6) f(x, y, 2, 1, P("dirtDark")); });
+      f(0, 0, 16, 4, P("grass"));
+      for (let x = 0; x < 16; x += 3) f(x, 4, 2, 1 + (x % 2), P("grassDark"));
+    }),
+    brick: canvasArt(16, 16, f => {
+      f(0, 0, 16, 16, P("brick"));
+      f(0, 7, 16, 1, P("brickDark")); f(0, 15, 16, 1, P("brickDark"));
+      f(0, 0, 1, 7, P("brickDark")); f(8, 8, 1, 7, P("brickDark"));
+      f(2, 1, 4, 1, "rgba(255,255,255,0.25)"); f(10, 9, 4, 1, "rgba(255,255,255,0.25)");
+    }),
+    crate: crate(false), used: crate(true),
+    platform: canvasArt(16, 16, f => {
+      f(0, 0, 16, 4, wood); f(0, 4, 16, 1, woodDark); f(3, 5, 2, 2, woodDark); f(11, 5, 2, 2, woodDark);
+    }),
+    spike: canvasArt(16, 16, f => {
+      [0, 8].forEach((base, i) => {
+        for (let row = 0; row < 8; row++) {
+          const w = row + 1;
+          f(base + 4 - Math.floor(w / 2), 8 + row, Math.max(w, 1), 1, i === 0 ? "#d7dce4" : "#c3c9d3");
+        }
+        f(base + 3, 8, 1, 2, "#ffffff");
+      });
+    }),
+    spring: canvasArt(16, 16, f => {
+      f(1, 6, 14, 3, "#e24b4b"); f(1, 6, 14, 1, "#ff8a8a");
+      for (let y = 9; y < 14; y += 2) f(4, y, 8, 1, "#9aa3ad");
+      f(2, 14, 12, 2, "#5b6470");
+    }),
+  };
+}
+
+const ART = (() => {
+  const sp = {}; for (const [k, v] of Object.entries(SPRITES.sassyPalette)) sp[k] = hex(v);
+  const cp = {}; for (const [k, v] of Object.entries(SPRITES.critterPalette)) cp[k] = hex(v);
+  const B = SPRITES.sassyBody;
+  return {
+    idle: spriteArt([...B, ...SPRITES.legs.idle], sp),
+    run: [spriteArt([...B, ...SPRITES.legs.run1], sp), spriteArt([...B, ...SPRITES.legs.run2], sp)],
+    jump: spriteArt([...B, ...SPRITES.legs.jump], sp),
+    beetle: SPRITES.beetle.map(r => spriteArt(r, cp)),
+    spiker: SPRITES.spiker.map(r => spriteArt(r, cp)),
+    bat: SPRITES.bat.map(r => spriteArt(r, cp)),
+    gem: canvasArt(8, 8, f => {
+      [[3, 0, 2], [2, 1, 4], [1, 2, 6], [0, 3, 8], [0, 4, 8], [1, 5, 6], [2, 6, 4], [3, 7, 2]]
+        .forEach(([x, y, w]) => f(x, y, w, 1, "#2fd6c8"));
+      f(2, 2, 2, 2, "#b8fff6"); f(4, 4, 3, 2, "#16a39a");
+    }),
+    goal: canvasArt(16, 48, f => {
+      f(7, 4, 2, 44, "#e8e2d0"); f(9, 4, 1, 44, "#b6ad94"); f(5, 44, 6, 4, "#6b5b45"); f(6, 0, 4, 4, "#ffd447");
+      for (let row = 0; row < 12; row++) { const w = row < 6 ? row + 2 : 13 - row; f(10, 5 + row, Math.min(w, 6), 1, "#3fbf55"); }
+      f(10, 10, 5, 1, "#23843a");
+    }),
+    checkpoint: [false, true].map(active => canvasArt(16, 32, f => {
+      f(7, 6, 2, 26, "#9a8f7a"); f(5, 29, 6, 3, "#5e5244");
+      const flag = active ? "#5bdc6a" : "#b0b0b0";
+      f(9, 6, 6, 5, flag); f(9, 11, 4, 2, flag);
+      f(6, 3, 4, 3, active ? "#ffe680" : "#808080");
+    })),
+  };
+})();
+
+// ---------------------------------------------------------------------------
+// Renderer
+const cv = document.getElementById("game");
+const ctx = cv.getContext("2d");
+let W = 0, H = 0, T = 40, DPR = 1;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 3);
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  T = Math.max(24, Math.floor(Math.min(H / 10, W / 9)));
+  if (game) game.snapCamera();
+}
+window.addEventListener("resize", resize);
+
+class Game {
+  constructor(index) {
+    this.index = index;
+    this.def = LEVELS[index];
+    this.world = new World(this.def);
+    this.pal = PALETTES[this.def.theme];
+    this.tiles = tileArt(this.pal);
+    this.cam = { x: 0, y: 0 };
+    this.fx = []; this.squashed = []; this.bumps = new Map(); this.shake = 0;
+    this.cpActive = this.world.L.checkpoints.map(() => false);
+    this.runFrame = 0; this.paused = false; this.reported = false;
+    this.snapCamera();
+  }
+  camTarget() {
+    const w = this.world, L = w.L;
+    const px = w.p.x * T, py = w.p.y * T;
+    let tx = px + w.p.facing * T * 1.5, ty = py + T * 1.5;
+    tx = Math.min(Math.max(tx, W / 2), Math.max(W / 2, L.w * T - W / 2));
+    ty = Math.min(Math.max(ty, H / 2), Math.max(H / 2, L.h * T - H / 2));
+    return { x: tx, y: ty };
+  }
+  snapCamera() { this.cam = this.camTarget(); }
+  sx(wx) { return Math.round(wx * T - this.cam.x + W / 2); }
+  sy(wy) { return Math.round(H / 2 - (wy * T - this.cam.y)); }
+
+  tick(dt) {
+    if (this.paused) return;
+    const w = this.world;
+    w.update(dt, input.merged());
+    for (const e of w.drain()) this.effect(e);
+    const t = this.camTarget();
+    this.cam.x += (t.x - this.cam.x) * Math.min(1, dt * 9);
+    this.cam.y += (t.y - this.cam.y) * Math.min(1, dt * 5);
+    if (w.pose === "run") this.runFrame += Math.abs(w.p.vx) * dt * 1.6;
+    this.fx = this.fx.filter(f => (f.t -= dt) > 0);
+    this.squashed = this.squashed.filter(s => (s.t -= dt) > 0);
+    for (const [k, v] of this.bumps) { if (v - dt <= 0) this.bumps.delete(k); else this.bumps.set(k, v - dt); }
+    this.shake = Math.max(0, this.shake - dt);
+  }
+  effect(e) {
+    const w = this.world;
+    switch (e.type) {
+      case "gem": { const g = w.L.gems[e.i]; this.fx.push({ kind: "pop", x: g.x, y: g.y, t: 0.3, d: 0.3 }); break; }
+      case "crate":
+        this.bumps.set(e.y * w.L.w + e.x, 0.14);
+        this.fx.push({ kind: "pop", x: e.x + 0.5, y: e.y + 1.2, t: 0.4, d: 0.4 });
+        buzz(15); break;
+      case "stomp":
+        this.squashed.push({ kind: e.e.kind, x: e.e.x, y: e.e.y, flip: e.e.vx > 0, t: 0.45 });
+        this.burst(e.e.x, e.e.y, "#ffffff"); buzz(20); break;
+      case "checkpoint":
+        this.cpActive[e.i] = true; const c = w.L.checkpoints[e.i]; this.burst(c.x, c.y, "#5bdc6a"); break;
+      case "hurt": this.shake = 0.12; buzz([30, 40, 30]); break;
+      case "died": this.shake = 0.18; buzz(80); break;
+      case "won": this.burst(w.L.goal.x, w.L.goal.y, "#ffd447"); this.burst(w.L.goal.x, w.L.goal.y + 1, "#ffb627"); break;
+    }
+  }
+  burst(x, y, color) {
+    for (let i = 0; i < 10; i++) {
+      const a = i / 10 * Math.PI * 2;
+      this.fx.push({ kind: "dot", x, y: y + 0.4, vx: Math.cos(a) * 2.8, vy: Math.sin(a) * 2.8, color, t: 0.35, d: 0.35 });
+    }
+  }
+
+  draw() {
+    const w = this.world, L = w.L, pal = this.pal;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    // sky
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, hex(pal.skyTop)); grad.addColorStop(1, hex(pal.skyBottom));
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+    const left = this.cam.x - W / 2, bottom = this.cam.y - H / 2;
+    // stars
+    if (this.def.theme === "dusk" || this.def.theme === "cavern") {
+      ctx.fillStyle = this.def.theme === "dusk" ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.25)";
+      for (let s = 0; s < 60; s++) {
+        const x = ((s * 7919) % (L.w * T)) - left * 0.3, y = H - (T * (5 + (s * 31) % 7) - bottom * 0.5);
+        const r = 1 + (s % 2);
+        const xx = ((x % (L.w * T)) + L.w * T) % (L.w * T);
+        if (xx < W) ctx.fillRect(xx, y, r, r);
+      }
+    }
+    // hills (parallax)
+    ctx.fillStyle = pal.hills;
+    const radii = [3.5, 5, 4.2, 6];
+    let hx = 0, i = 0;
+    const hy = this.def.theme === "sky" ? 3 : 1;
+    while (hx < L.w * T * 0.5 + W) {
+      const r = T * radii[i % 4];
+      const x = hx - left * 0.4, y = H - (hy * T - bottom * 0.5);
+      if (x + r > 0 && x - r < W) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+      hx += r * 1.6; i++;
+    }
+
+    ctx.save();
+    if (this.shake > 0) ctx.translate(Math.sin(this.shake * 120) * T * 0.12, 0);
+
+    // tiles in view
+    const x0 = Math.max(0, Math.floor(left / T) - 1), x1 = Math.min(L.w - 1, Math.ceil((left + W) / T) + 1);
+    for (let y = 0; y < L.h; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const t = L.tile(x, y);
+        if (t === "empty") continue;
+        let img;
+        if (t === "ground") img = isSolid(L.tile(x, y + 1)) ? this.tiles.fill : this.tiles.top;
+        else img = this.tiles[t];
+        const lift = this.bumps.has(y * L.w + x) ? T * 0.2 : 0;
+        const sx = this.sx(x), sy = this.sy(y + 1) - lift;
+        ctx.drawImage(img, sx, sy, this.sx(x + 1) - sx, this.sy(y) - this.sy(y + 1));
+      }
+    }
+    // goal and checkpoints
+    this.drawAnchored(ART.goal, L.goal.x, L.goal.y, T, T * 3);
+    L.checkpoints.forEach((c, k) => this.drawAnchored(ART.checkpoint[this.cpActive[k] ? 1 : 0], c.x, c.y, T, T * 2));
+    // gems
+    const bob = Math.sin(performance.now() / 1000 * Math.PI / 0.6) * 0.04;
+    L.gems.forEach((g, k) => { if (!w.gemTaken[k]) this.drawCentered(ART.gem, g.x, g.y + bob, T * 0.5, T * 0.5); });
+    // enemies
+    const now = performance.now() / 1000;
+    for (const e of w.enemies) {
+      if (!e.alive) continue;
+      const frames = ART[e.kind], f = frames[Math.floor(now / (e.kind === "bat" ? 0.15 : 0.25)) % 2];
+      this.drawAnchored(f, e.x, e.y, T * 0.95, T * 0.95 * 8 / 12, e.vx > 0);
+    }
+    for (const s of this.squashed) {
+      ctx.globalAlpha = Math.min(1, s.t / 0.2);
+      this.drawAnchored(ART[s.kind][0], s.x, s.y, T * 1.1, T * 0.95 * 8 / 12 * 0.35, s.flip);
+      ctx.globalAlpha = 1;
+    }
+    // Sassy
+    const p = w.p, pose = w.pose;
+    let img = ART.idle;
+    if (pose === "run") img = ART.run[Math.floor(this.runFrame) % 2];
+    else if (pose === "jump" || pose === "fall" || pose === "cheer" || pose === "hurt") img = ART.jump;
+    if (p.hurt > 0 && !p.dead && Math.floor(w.time * 12) % 2 === 0) ctx.globalAlpha = 0.35;
+    this.drawAnchored(img, p.x, p.y, T * 1.35, T * 0.975, p.facing < 0, p.dead);
+    ctx.globalAlpha = 1;
+    // effects
+    for (const f of this.fx) {
+      const k = 1 - f.t / f.d;
+      ctx.globalAlpha = Math.max(0, f.t / f.d);
+      if (f.kind === "pop") this.drawCentered(ART.gem, f.x, f.y + k * 0.9, T * 0.5 * (1 + k * 0.4), T * 0.5 * (1 + k * 0.4));
+      else { ctx.fillStyle = f.color; ctx.fillRect(this.sx(f.x + f.vx * k * f.d) - T * 0.06, this.sy(f.y + f.vy * k * f.d) - T * 0.06, T * 0.12, T * 0.12); }
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+  drawAnchored(img, x, y, w, h, flip = false, upsideDown = false) {
+    const sx = this.sx(x), sy = this.sy(y);
+    ctx.save();
+    ctx.translate(sx, sy);
+    if (upsideDown) { ctx.translate(0, -h); ctx.scale(1, -1); }
+    if (flip) ctx.scale(-1, 1);
+    ctx.drawImage(img, Math.round(-w / 2), Math.round(-h), Math.round(w), Math.round(h));
+    ctx.restore();
+  }
+  drawCentered(img, x, y, w, h) {
+    ctx.drawImage(img, Math.round(this.sx(x) - w / 2), Math.round(this.sy(y) - h / 2), Math.round(w), Math.round(h));
+  }
+}
+
+function buzz(pattern) { try { navigator.vibrate && navigator.vibrate(pattern); } catch (_) {} }
+
+// ---------------------------------------------------------------------------
+// Input: touch buttons, keyboard, and game controllers
+const input = {
+  touch: { left: false, right: false, jumpHeld: false },
+  presses: 0, keys: new Set(), padWas: false,
+  merged() {
+    let left = this.touch.left || this.keys.has("ArrowLeft") || this.keys.has("KeyA");
+    let right = this.touch.right || this.keys.has("ArrowRight") || this.keys.has("KeyD");
+    let held = this.touch.jumpHeld || this.keys.has("Space") || this.keys.has("ArrowUp") || this.keys.has("KeyW");
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const pad of pads) {
+      if (!pad) continue;
+      const ax = pad.axes[0] || 0;
+      left = left || ax < -0.3 || !!(pad.buttons[14] && pad.buttons[14].pressed);
+      right = right || ax > 0.3 || !!(pad.buttons[15] && pad.buttons[15].pressed);
+      const a = !!(pad.buttons[0] && pad.buttons[0].pressed);
+      if (a && !this.padWas) this.presses++;
+      this.padWas = a;
+      held = held || a;
+    }
+    return { left, right, jumpHeld: held, jumpPresses: this.presses };
+  },
+};
+function holdButton(id, onChange) {
+  const el = document.getElementById(id);
+  const set = down => { el.classList.toggle("down", down); onChange(down); };
+  el.addEventListener("pointerdown", e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (_) {} set(true); });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => el.addEventListener(t, () => set(false)));
+  el.addEventListener("contextmenu", e => e.preventDefault());
+}
+holdButton("left", d => input.touch.left = d);
+holdButton("right", d => input.touch.right = d);
+holdButton("jump", d => { if (d) input.presses++; input.touch.jumpHeld = d; });
+window.addEventListener("keydown", e => {
+  if (["Space", "ArrowUp", "KeyW"].includes(e.code) && !e.repeat) input.presses++;
+  if (e.code === "Escape" && game) setPaused(!game.paused);
+  input.keys.add(e.code);
+  if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
+});
+window.addEventListener("keyup", e => input.keys.delete(e.code));
+window.addEventListener("blur", () => { input.keys.clear(); input.touch = { left: false, right: false, jumpHeld: false }; });
+
+// ---------------------------------------------------------------------------
+// Saved progress (stars and best times on this device)
+const STORE = "apnaSassy.records";
+let records = {};
+try { records = JSON.parse(localStorage.getItem(STORE) || "{}") || {}; } catch (_) { records = {}; }
+function saveResult(index, r) {
+  const best = records[index] || { stars: 0, bestTime: Infinity, bestScore: 0 };
+  best.stars = Math.max(best.stars, r.stars);
+  best.bestTime = Math.min(best.bestTime ?? Infinity, r.time);
+  best.bestScore = Math.max(best.bestScore, r.score);
+  records[index] = best;
+  try { localStorage.setItem(STORE, JSON.stringify(records)); } catch (_) {}
+}
+const unlocked = i => i === 0 || !!records[i - 1];
+
+// ---------------------------------------------------------------------------
+// Screens
+const $ = id => document.getElementById(id);
+const LEVEL_COLORS = { meadow: "#3d9a35", cavern: "#544a78", sky: "#5f8fe8", dusk: "#8c4563" };
+let game = null;
+
+function showMenu() {
+  game = null;
+  $("hud").hidden = true; $("controls").hidden = true; $("pause").hidden = true; $("result").hidden = true;
+  $("menu").hidden = false;
+  const total = Object.values(records).reduce((s, r) => s + (r.stars || 0), 0);
+  $("totalStars").textContent = `★ ${total} / ${LEVELS.length * 3}`;
+  const list = $("levels");
+  list.innerHTML = "";
+  LEVELS.forEach((lv, i) => {
+    const rec = records[i], open = unlocked(i);
+    const b = document.createElement("button");
+    b.className = "lvl"; b.disabled = !open; b.style.background = LEVEL_COLORS[lv.theme];
+    const stars = open ? "★★★".slice(0, rec ? rec.stars : 0) + "☆☆☆".slice(rec ? rec.stars : 0) : "🔒";
+    b.innerHTML = `<span class="num">${i + 1}</span>
+      <span><span class="name"></span><br><span class="sub"></span></span>
+      <span class="st">${stars}</span>`;
+    b.querySelector(".name").textContent = lv.name;
+    b.querySelector(".sub").textContent = rec ? SAY.best(rec.bestTime, rec.bestScore) : open ? SAY.notPlayed : SAY.locked;
+    b.addEventListener("click", () => start(i));
+    list.appendChild(b);
+  });
+}
+
+function start(i) {
+  $("menu").hidden = true; $("result").hidden = true; $("pause").hidden = true;
+  $("hud").hidden = false; $("controls").hidden = false;
+  input.presses = 0; input.touch = { left: false, right: false, jumpHeld: false };
+  game = new Game(i);
+  $("levelName").textContent = LEVELS[i].name;
+  hudCache = {};
+}
+
+function setPaused(v) {
+  if (!game || game.world.result) return;
+  game.paused = v;
+  $("pause").hidden = !v;
+}
+
+function showResult() {
+  const r = game.world.result, i = game.index, last = i + 1 >= LEVELS.length;
+  saveResult(i, r);
+  $("controls").hidden = true;
+  $("resultTitle").textContent = last ? SAY.homeAtLast : SAY.levelDone;
+  $("resultStars").textContent = "★".repeat(r.stars) + "☆".repeat(3 - r.stars);
+  $("resultLine").textContent = SAY.summary(r.time, r.gems, r.totalGems, r.score);
+  $("resultRules").textContent = SAY.starRules(LEVELS[i].parTime);
+  $("nextBtn").hidden = last;
+  $("result").hidden = false;
+}
+
+let hudCache = {};
+function updateHud() {
+  const w = game.world;
+  const v = { hearts: w.p.hearts, gems: `${w.gems}/${w.totalGems}`, secs: Math.floor(w.time) };
+  if (v.hearts !== hudCache.hearts) $("hearts").textContent = "♥".repeat(v.hearts) + "♡".repeat(MAX_HEARTS - v.hearts);
+  if (v.gems !== hudCache.gems) $("gems").textContent = v.gems;
+  if (v.secs !== hudCache.secs) $("timer").textContent = SAY.seconds(v.secs);
+  hudCache = v;
+}
+
+$("pauseBtn").addEventListener("click", () => setPaused(true));
+$("resumeBtn").addEventListener("click", () => setPaused(false));
+$("restartBtn").addEventListener("click", () => start(game.index));
+$("menuBtn").addEventListener("click", showMenu);
+$("menuBtn2").addEventListener("click", showMenu);
+$("replayBtn").addEventListener("click", () => start(game.index));
+$("nextBtn").addEventListener("click", () => start(game.index + 1));
+document.addEventListener("visibilitychange", () => { if (document.hidden) setPaused(true); });
+
+// ---------------------------------------------------------------------------
+// Main loop
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000);
+  last = now;
+  if (game) {
+    game.tick(dt);
+    game.draw();
+    updateHud();
+    if (game.world.result && !game.reported) { game.reported = true; setTimeout(showResult, 700); }
+  } else {
+    drawMenuBackdrop(now / 1000);
+  }
+  requestAnimationFrame(frame);
+}
+function drawMenuBackdrop(t) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#6ec6ff"); g.addColorStop(1, "#c9ecff");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+resize();
+showMenu();
+requestAnimationFrame(frame);
+</script>

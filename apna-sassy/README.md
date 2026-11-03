@@ -37,6 +37,13 @@ All on-screen text is in Angika as spoken around Munger, Bihar, written in Devan
 and "अपना सैसी घोॅर पहुँची गेलै!" at the end of the game. Every line lives in
 `App/Strings.swift`, so wording can be changed in one place.
 
+## Play in the browser
+
+`web/index.html` is the same game for Safari on iPhone (or any browser): the same rules, levels,
+art and Angika text, ported to JavaScript. Open it, then use Share › Add to Home Screen so it
+launches full screen. It's generated from the iOS sources with `python3 web/build.py`, so
+levels and sprites stay in step with the app.
+
 ## Install on your iPhone
 
 You need a Mac with Xcode.
