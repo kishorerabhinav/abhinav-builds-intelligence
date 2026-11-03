@@ -48,7 +48,7 @@ async function save() {
   await chrome.storage.local.set(s);
   $("sites").value = s.sites.join("\n");
   showState(s);
-  $("saved").textContent = s.enabled ? "Saved. Reload the page to use it." : "Saved. Detour is off.";
+  $("saved").textContent = s.enabled ? "Saved. Reload the page to use it." : "Saved. The extension is off.";
   await chrome.storage.session.remove("lastError");
   return true;
 }

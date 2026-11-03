@@ -13,7 +13,7 @@ async function apply() {
   const size = n => `icons/${on ? "on" : "off"}-${n}.png`;
   await chrome.action.setIcon({ path: { 16: size(16), 32: size(32) } });
   await chrome.action.setTitle({
-    title: on ? `Detour: on (${s.mode === "all" ? "all sites" : s.sites.length + " sites"} via ${s.host})` : "Detour: off",
+    title: on ? `Abhinav's extension: on (${s.mode === "all" ? "all sites" : s.sites.length + " sites"} via ${s.host})` : "Abhinav's extension: off",
   });
   await chrome.storage.session.set({ applied: on, appliedAt: Date.now() });
 }
