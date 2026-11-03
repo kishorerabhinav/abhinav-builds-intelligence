@@ -151,7 +151,7 @@ final class GameScene: SKScene {
             enemyNodes[enemy.id] = node
         }
 
-        sassy.size = CGSize(width: tile * 0.95, height: tile * 0.95)
+        sassy.size = CGSize(width: tile * 1.35, height: tile * 0.975)   // 18x13 sprite
         sassy.anchorPoint = CGPoint(x: 0.5, y: 0)
         sassy.zPosition = 5
         worldNode.addChild(sassy)

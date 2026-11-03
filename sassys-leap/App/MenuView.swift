@@ -17,7 +17,7 @@ struct MenuView: View {
                     Image(uiImage: UIImage(cgImage: Art.sassyIdle.cgImage()))
                         .interpolation(.none)
                         .resizable()
-                        .frame(width: 96, height: 96)
+                        .frame(width: 126, height: 91)
                     Text("Sassy's Leap")
                         .font(.system(size: 44, weight: .black, design: .rounded))
                         .foregroundStyle(.white)

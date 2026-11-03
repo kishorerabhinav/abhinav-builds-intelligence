@@ -45,34 +45,34 @@ struct Palette {
 }
 
 enum Art {
-    // MARK: - Sassy, the hero (an original sprout with a flower, shades and attitude)
+    // MARK: - Sassy, the hero: a Saint Bernard in her blue harness (18x13, facing right)
 
     private static let sassyPalette: [Character: UIColor] = [
-        "k": .init(hex: 0x1d2b22), "g": .init(hex: 0x62c95c), "l": .init(hex: 0xa6ec86),
-        "F": .init(hex: 0xff5fa2), "y": .init(hex: 0xffd447), "w": .white, "e": .init(hex: 0x15131c),
-        "p": .init(hex: 0xff9fb0), "o": .init(hex: 0xf08c3a),
+        "k": .init(hex: 0x2a1a10), "b": .init(hex: 0xc0702a), "B": .init(hex: 0x5a2c10),
+        "w": .init(hex: 0xfbf7ef), "W": .init(hex: 0xe6d9c4), "n": .init(hex: 0x141414),
+        "e": .init(hex: 0x141414), "h": .init(hex: 0x2457e6),
     ]
 
     private static let sassyBody = [
-        ".....FFF....",
-        "....FFyFF...",
-        ".....FFF....",
-        "...kkkkkk...",
-        "..kgllgggk..",
-        ".kgeweeweegk",
-        ".kpggggggpk.",
-        ".kgggggkkgk.",
-        ".kggggggggk.",
-        "..kggggggk..",
-        "...kkkkkk...",
+        "...........kkkkk..",
+        "..........kbbwbbk.",
+        ".........kbbbwBBbk",
+        ".........kBBbwBewk",
+        ".........kBBbwwwwn",
+        "..kkkkkkkkBBbwwwwk",
+        ".bkbbbbbbbhBBwwwk.",
+        "bbkbbbbbbbhbBwwk..",
+        "bWkbbwwbbbhbbwwk..",
+        "wwkbbbbbbbhhbwwk..",
+        "Ww.kwwbbbbbbwwk...",
     ]
 
-    static let sassyIdle = sprite(sassyBody + ["...oo..oo..."], sassyPalette)
+    static let sassyIdle = sprite(sassyBody + ["...kwwk....kwwk...", "...kwwk....kwwk..."], sassyPalette)
     static let sassyRun = [
-        sprite(sassyBody + ["..oo....oo.."], sassyPalette),
-        sprite(sassyBody + ["....oooo...."], sassyPalette),
+        sprite(sassyBody + ["..kwk.......kwk...", ".kwk.........kwk.."], sassyPalette),
+        sprite(sassyBody + ["....kwk...kwk.....", ".....kwk...kwk...."], sassyPalette),
     ]
-    static let sassyJump = sprite(Array(sassyBody.dropLast()) + ["..kkkkkkkk..", "..o......o.."], sassyPalette)
+    static let sassyJump = sprite(sassyBody + ["..kwwk.....kwwk...", ".................."], sassyPalette)
 
     // MARK: - Enemies (face left by default)
 

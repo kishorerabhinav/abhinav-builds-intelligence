@@ -1,10 +1,12 @@
 # Sassy's Leap
 
 An original side-scrolling platformer for iPhone (iOS 17 and later, built for iOS 27). You play
-Sassy, a sprout with a flower, sunglasses and plenty of attitude, trying to get home across four worlds. Run, jump, stomp critters, pop crates
+Sassy, a Saint Bernard in a blue harness, trying to get home across four worlds. Run, jump, stomp critters, pop crates
 for gems, and bounce off springs.
 
-All the characters, levels and pixel art are original. Every sprite and tile is drawn in code at
+![Sassy's sprite frames: idle, two running frames and jumping](docs/sassy-sprite.png)
+
+Sassy is drawn from a photo of the real Sassy. All the characters, levels and pixel art are original. Every sprite and tile is drawn in code at
 launch, so the app has no image files.
 
 ## Playing
