@@ -1,12 +1,14 @@
 # Apna Sassy
 
+<img src="docs/app-icon.png" alt="App icon: Sassy the Saint Bernard on a sunny sky" width="160">
+
 An original side-scrolling platformer for iPhone (iOS 17 and later, built for iOS 27). You play
 Apna Sassy, a Saint Bernard in a blue harness, trying to get home across four worlds. Run, jump, stomp critters, pop crates
 for gems, and bounce off springs.
 
 ![Apna Sassy's sprite frames: idle, two running frames and jumping](docs/sassy-sprite.png)
 
-Apna Sassy is drawn from a photo of the real Sassy. All the characters, levels and pixel art are original. Every sprite and tile is drawn in code at
+Apna Sassy is drawn from a photo of the real Sassy, and the app icon is made from another photo of her. All the characters, levels and pixel art are original. Every sprite and tile is drawn in code at
 launch, so the app has no image files.
 
 ## Playing
