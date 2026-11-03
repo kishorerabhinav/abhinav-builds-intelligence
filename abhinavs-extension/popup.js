@@ -39,12 +39,28 @@ function validate(s) {
   return "";
 }
 
+// Which field to jump to for each problem, so the fix is one tap away.
+function fieldFor(s) {
+  if (!s.host) return "host";
+  if (!(s.port >= 1 && s.port <= 65535)) return "port";
+  return "sites";
+}
+
 async function save() {
   const s = read();
   const problem = validate(s);
   $("error").hidden = !problem;
   $("error").textContent = problem;
-  if (problem) return false;
+  for (const id of ["host", "port", "sites"]) $(id).classList.remove("missing");
+  if (problem) {
+    // Say it next to the switch too, where the eye is, and highlight the empty field.
+    $("state").textContent = "Can't turn on yet: " + problem.charAt(0).toLowerCase() + problem.slice(1);
+    $("state").style.color = "var(--warn)";
+    const field = $(fieldFor(s));
+    field.classList.add("missing");
+    field.focus();
+    return false;
+  }
   await chrome.storage.local.set(s);
   $("sites").value = s.sites.join("\n");
   showState(s);
