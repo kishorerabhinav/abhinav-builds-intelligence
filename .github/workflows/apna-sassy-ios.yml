@@ -1,0 +1,50 @@
+name: Apna Sassy iOS build
+
+on:
+  push:
+    paths:
+      - "apna-sassy/**"
+      - ".github/workflows/apna-sassy-ios.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apna-sassy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Game rules tests
+        run: swift test
+
+      - name: Generate the Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Build the iPhone app (unsigned)
+        run: |
+          xcodebuild -version
+          xcodebuild \
+            -project ApnaSassy.xcodeproj \
+            -scheme ApnaSassy \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package as .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/ApnaSassy.app Payload/
+          zip -qr ApnaSassy-unsigned.ipa Payload
+          ls -la ApnaSassy-unsigned.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ApnaSassy-unsigned-ipa
+          path: apna-sassy/ApnaSassy-unsigned.ipa

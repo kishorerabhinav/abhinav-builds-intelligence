@@ -17,6 +17,7 @@ targets:
     type: application
     platform: iOS
     sources: [App]
+    scheme: {}
     dependencies:
       - package: GameCore
     settings:
